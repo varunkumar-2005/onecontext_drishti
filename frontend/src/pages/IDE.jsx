@@ -78,6 +78,7 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
   const [insights, setInsights] = useState([]);
   const [insightQuery, setInsightQuery] = useState("");
   const [members, setMembers] = useState([]);
+  const chatEndRef = useRef(null);
 
   // Context pack modal state
   const [contextPackModal, setContextPackModal] = useState(false);
@@ -168,6 +169,13 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
     const intv = setInterval(syncTeam, 3000);
     return () => clearInterval(intv);
   }, [currentTeam]);
+
+  // Auto-scroll chat to bottom
+  useEffect(() => {
+    if (rightTab === "chat") {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatMessages, rightTab]);
 
   async function loadFiles(path) {
     if (!selectedProjectId) return;
@@ -1024,11 +1032,37 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
                 {rightTab === "chat" && (
                   <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
                     <div className="ide-chat-list">
-                      {chatMessages.map((m, i) => (
-                        <div key={i} className="ide-chat-msg">
-                          <strong style={{ color: "#58a6ff" }}>{m.sender}:</strong> {m.message}
+                      {chatMessages.length === 0 ? (
+                        <div style={{ textAlign: "center", color: "#8b949e", fontSize: "11px", padding: "20px 8px" }}>
+                          💬 No messages yet. Send a message to chat with teammates or ask @agent!
                         </div>
-                      ))}
+                      ) : (
+                        chatMessages.map((m, i) => {
+                          const senderStr = (m.sender || "").trim();
+                          const isMe =
+                            senderStr.toLowerCase() === userName.toLowerCase().trim() ||
+                            senderStr.toLowerCase() === "you";
+                          const isAgent =
+                            m.role === "agent" ||
+                            senderStr.toLowerCase().includes("agent") ||
+                            senderStr.toLowerCase().includes("copilot");
+
+                          return (
+                            <div
+                              key={i}
+                              className={`ide-chat-bubble-container ${isMe ? "sender" : "receiver"}`}
+                            >
+                              <div className={`ide-chat-meta ${isMe ? "sender" : "receiver"}`}>
+                                {isMe ? "You" : isAgent ? `🤖 ${senderStr}` : `👤 ${senderStr}`}
+                              </div>
+                              <div className={`ide-chat-bubble ${isMe ? "sender" : "receiver"}`}>
+                                {m.message}
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                      <div ref={chatEndRef} />
                     </div>
 
                     <form
@@ -1046,12 +1080,12 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
                     >
                       <input
                         type="text"
-                        placeholder="Team message..."
+                        placeholder="Team message or @agent..."
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         className="ide-chat-input"
                       />
-                      <button type="submit" className="ide-btn-primary" style={{ padding: "4px 8px" }}>
+                      <button type="submit" className="ide-btn-primary" style={{ padding: "4px 10px" }}>
                         Send
                       </button>
                     </form>

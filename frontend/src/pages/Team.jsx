@@ -669,24 +669,40 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
               messages.map((m) => {
                 const isDecision = m.message_type === "decision" || m.message_type === "code_change";
                 const isAgent = m.role === "agent" || m.sender.toLowerCase().includes("agent") || m.sender.toLowerCase().includes("copilot");
+                const currentUserName = (displayName || localStorage.getItem("onecontext_user") || "Developer").trim();
+                const senderStr = (m.sender || "").trim();
+                const isMe = senderStr.toLowerCase() === currentUserName.toLowerCase() || senderStr.toLowerCase() === "you";
 
                 return (
                   <div
                     key={m.id}
                     style={{
                       ...styles.chatBubble,
+                      alignSelf: isMe ? "flex-end" : "flex-start",
+                      marginLeft: isMe ? "auto" : "0",
+                      marginRight: isMe ? "0" : "auto",
+                      maxWidth: "80%",
+                      borderRadius: isMe ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
                       borderLeft: isDecision
                         ? "4px solid #10b981"
                         : isAgent
                         ? "4px solid #f59e0b"
-                        : "4px solid #3b82f6",
-                      backgroundColor: isDecision ? "#064e3b26" : isAgent ? "#451a0326" : "#18181b",
+                        : isMe
+                        ? "4px solid #3b82f6"
+                        : "4px solid #6b7280",
+                      backgroundColor: isDecision
+                        ? "#064e3b26"
+                        : isAgent
+                        ? "#451a0326"
+                        : isMe
+                        ? "#1e3a5f"
+                        : "#18181b",
                     }}
                   >
                     <div style={styles.chatBubbleHeader}>
                       <span style={styles.senderName}>
-                        {isAgent ? "🤖 " : isDecision ? "⚡ " : "👤 "}
-                        <strong>{m.sender}</strong>
+                        {isAgent ? "🤖 " : isDecision ? "⚡ " : isMe ? "👤 You " : "👤 "}
+                        <strong>{isMe ? "" : m.sender}</strong>
                         <span style={styles.roleTag}>({m.role})</span>
                       </span>
                       <span style={styles.chatTime}>
