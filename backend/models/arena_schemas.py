@@ -197,7 +197,7 @@ class ThemedQuest(BaseModel):
     description: str
     issue_url: Optional[str] = None
     assigned_to: Optional[str] = None
-    status: Literal["available", "claimed", "in_progress", "verified", "closed"] = "available"
+    status: str = "available"
     verification_requirements: str
     xp_reward: int = 100
     evidence: Optional[Dict[str, Any]] = None
