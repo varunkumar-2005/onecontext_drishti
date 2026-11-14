@@ -102,6 +102,29 @@ export default function App() {
               <div style={styles.activeRoomBadge}>
                 <span>Room: <strong>{currentTeam.name}</strong></span>
                 <span style={styles.joinCodePill}>{currentTeam.join_code}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem("onecontext_room");
+                    localStorage.removeItem("onecontext_user");
+                    setCurrentTeam(null);
+                    window.location.href = "/";
+                  }}
+                  style={{
+                    background: "rgba(239, 68, 68, 0.15)",
+                    border: "1px solid #ef4444",
+                    color: "#fca5a5",
+                    borderRadius: "4px",
+                    padding: "2px 8px",
+                    fontSize: "11px",
+                    cursor: "pointer",
+                    marginLeft: "8px",
+                    fontWeight: 600,
+                  }}
+                  title="Leave this room and reset session for a fresh demo"
+                >
+                  ✕ Leave Room
+                </button>
               </div>
             )}
 

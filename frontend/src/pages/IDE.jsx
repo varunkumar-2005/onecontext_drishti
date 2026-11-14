@@ -578,8 +578,31 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
             <span className="ide-project-pill">
               Project: <strong>{selectedProjectName}</strong>
             </span>
-            <span style={{ fontSize: "11px", color: "#8b949e" }}>
+            <span style={{ fontSize: "11px", color: "#8b949e", display: "inline-flex", alignItems: "center", gap: "4px" }}>
               Logged in as: <strong style={{ color: "#58a6ff" }}>{userName}</strong>
+              <button
+                type="button"
+                onClick={() => {
+                  const newName = prompt("Enter your name for the demo:", userName);
+                  if (newName && newName.trim()) {
+                    localStorage.setItem("onecontext_user", newName.trim());
+                    window.location.reload();
+                  }
+                }}
+                style={{
+                  background: "transparent",
+                  border: "1px solid #30363d",
+                  color: "#8b949e",
+                  borderRadius: "3px",
+                  padding: "1px 5px",
+                  cursor: "pointer",
+                  fontSize: "10px",
+                  marginLeft: "4px",
+                }}
+                title="Change user display name"
+              >
+                ✎ change
+              </button>
             </span>
           </div>
         </div>
