@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
+from typing import Optional
 from dotenv import load_dotenv
 from pydantic import Field
 from pydantic_settings import BaseSettings  # pydantic v2 ships pydantic-settings separately
@@ -36,6 +37,17 @@ class Settings(BaseSettings):
         default="qwen/qwen3.8-27b",  # confirmed available on Groq
         alias="GROQ_FALLBACK_MODEL",
     )
+
+    # --- Gemini (Arena Image Generation) ---
+    gemini_api_key: Optional[str] = Field(
+        default=None,
+        alias="GEMINI_API_KEY",
+    )
+    gemini_image_model: str = Field(
+        default="",
+        alias="GEMINI_IMAGE_MODEL",
+    )
+    gemini_text_model: Optional[str] = Field(default=None, alias="GEMINI_TEXT_MODEL")
 
     model_config = {"populate_by_name": True}
 

@@ -170,6 +170,27 @@ class MemoryService:
             max_results=max_results,
         )
 
+        if not raw_items:
+            try:
+                events = self.db.get_events(project_id, limit=30)
+                q_words = set(query.lower().split())
+                for ev in events:
+                    body = ev.get("body") or ev.get("title") or ""
+                    if any(w in body.lower() for w in q_words if len(w) > 3):
+                        raw_items.append({
+                            "id": f"ev-{ev.get('id')}",
+                            "text": body,
+                            "type": "local_event",
+                            "metadata": {
+                                "source": ev.get("type", "note"),
+                                "agent_id": ev.get("author", "system"),
+                                "timestamp": ev.get("created_at"),
+                            },
+                            "score": 0.85,
+                        })
+            except Exception as e:
+                logger.warning(f"Local memory fallback query failed: {e}")
+
         superseded_ids = set()
         superseded_texts = []
         if hasattr(self.db, "get_superseded_info"):

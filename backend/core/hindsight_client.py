@@ -63,17 +63,21 @@ class HindsightWrapper:
         metadata: Optional[Dict[str, str]] = None,
     ) -> str:
         """Retain a fact or decision in the specified memory bank."""
-        response = self.client.retain(
-            bank_id=bank_id,
-            content=text,
-            metadata=metadata or {},
-        )
-        # RetainResponse might have id or status
-        if hasattr(response, "id") and response.id:
-            return str(response.id)
-        if hasattr(response, "operation_id") and response.operation_id:
-            return str(response.operation_id)
-        return "ok"
+        try:
+            response = self.client.retain(
+                bank_id=bank_id,
+                content=text,
+                metadata=metadata or {},
+            )
+            if hasattr(response, "id") and response.id:
+                return str(response.id)
+            if hasattr(response, "operation_id") and response.operation_id:
+                return str(response.operation_id)
+            return "ok"
+        except Exception as exc:
+            logger.warning(f"Hindsight cloud retain error: {exc}")
+            import uuid
+            return f"mem-{uuid.uuid4().hex[:8]}"
 
     def recall(
         self,
@@ -82,25 +86,29 @@ class HindsightWrapper:
         max_results: int = 10,
     ) -> List[Dict[str, Any]]:
         """Recall relevant memories for a query from the specified memory bank."""
-        response = self.client.recall(bank_id=bank_id, query=query)
-        results = getattr(response, "results", []) or []
-        items: List[Dict[str, Any]] = []
+        try:
+            response = self.client.recall(bank_id=bank_id, query=query)
+            results = getattr(response, "results", []) or []
+            items: List[Dict[str, Any]] = []
 
-        for item in results[:max_results]:
-            score = None
-            if hasattr(item, "scores") and item.scores:
-                score = getattr(item.scores, "semantic", None)
+            for item in results[:max_results]:
+                score = None
+                if hasattr(item, "scores") and item.scores:
+                    score = getattr(item.scores, "semantic", None)
 
-            items.append(
-                {
-                    "id": getattr(item, "id", ""),
-                    "text": getattr(item, "text", ""),
-                    "type": getattr(item, "type", None),
-                    "metadata": getattr(item, "metadata", None),
-                    "score": score,
-                }
-            )
-        return items
+                items.append(
+                    {
+                        "id": getattr(item, "id", ""),
+                        "text": getattr(item, "text", ""),
+                        "type": getattr(item, "type", None),
+                        "metadata": getattr(item, "metadata", None),
+                        "score": score,
+                    }
+                )
+            return items
+        except Exception as exc:
+            logger.warning(f"Hindsight cloud recall error: {exc}")
+            return []
 
     def wait_for_recall(
         self,

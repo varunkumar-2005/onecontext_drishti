@@ -19,6 +19,14 @@ const api = axios.create({
   },
 });
 
+api.interceptors.request.use((config) => {
+  const arenaToken = localStorage.getItem("onecontext_arena_token");
+  if (arenaToken && config.url?.startsWith("/arena/")) {
+    config.headers.Authorization = `Bearer ${arenaToken}`;
+  }
+  return config;
+});
+
 export const getHealth = async () => {
   const res = await api.get("/health");
   return res.data;
@@ -243,5 +251,109 @@ export const syncGitHub = async (projectId) => {
   const res = await api.post(`/projects/${projectId}/github/sync`);
   return res.data;
 };
+
+// --- OneContext Arena APIs ---
+export const listArenaSessions = async (projectId = null) => {
+  const url = projectId ? `/arena/sessions?project_id=${projectId}` : `/arena/sessions`;
+  const res = await api.get(url);
+  return res.data;
+};
+
+export const createArenaSession = async (payload) => {
+  const res = await api.post("/arena/sessions", payload);
+  if (res.data.arena_token) localStorage.setItem("onecontext_arena_token", res.data.arena_token);
+  return res.data;
+};
+
+export const importArenaRepository = async (sessionId, repoUrl) => (
+  await api.post(`/arena/sessions/${sessionId}/repository-import`, { repo_url: repoUrl })
+).data;
+
+export const importArenaTasks = async (sessionId, markdown, defaultXP = 100) => (
+  await api.post(`/arena/sessions/${sessionId}/tasks-import`, { markdown, default_xp: defaultXP })
+).data;
+
+export const getArenaSession = async (sessionId) => {
+  const res = await api.get(`/arena/sessions/${sessionId}`);
+  return res.data;
+};
+
+export const joinArenaSession = async (payload) => {
+  const res = await api.post("/arena/sessions/join", payload);
+  if (res.data.arena_token) localStorage.setItem("onecontext_arena_token", res.data.arena_token);
+  return res.data;
+};
+
+export const sendArenaHeartbeat = async (sessionId, _userId, regionId = null, questId = null) => {
+  let url = `/arena/sessions/${sessionId}/heartbeat?`;
+  if (regionId) url += `&current_region_id=${encodeURIComponent(regionId)}`;
+  if (questId) url += `&current_quest_id=${encodeURIComponent(questId)}`;
+  const res = await api.post(url);
+  return res.data;
+};
+
+export const claimArenaQuest = async (sessionId, questId, { userId, userName }) => {
+  const res = await api.post(`/arena/sessions/${sessionId}/quests/${questId}/claim`, {
+    user_id: userId,
+    user_name: userName,
+  });
+  return res.data;
+};
+
+export const proposeArenaBossFix = async (sessionId, bossId, payload) => {
+  const res = await api.post(`/arena/sessions/${sessionId}/bosses/${bossId}/propose-fix`, payload);
+  return res.data;
+};
+
+export const approveArenaBossFix = async (sessionId, bossId, payload) => {
+  const res = await api.post(`/arena/sessions/${sessionId}/bosses/${bossId}/approve`, payload);
+  return res.data;
+};
+
+export const switchArenaTheme = async (sessionId, payload) => {
+  const res = await api.post(`/arena/sessions/${sessionId}/switch-theme`, payload);
+  return res.data;
+};
+
+export const getArenaRecap = async (sessionId) => {
+  const res = await api.get(`/arena/sessions/${sessionId}/recap`);
+  return res.data;
+};
+
+export const searchArenaLore = async (sessionId, query) => {
+  const res = await api.get(`/arena/sessions/${sessionId}/lore?query=${encodeURIComponent(query)}`);
+  return res.data;
+};
+
+export const getArenaWorld = async (sessionId) => (await api.get(`/arena/sessions/${sessionId}/world`)).data;
+export const refreshArenaWorld = async (sessionId) => (await api.post(`/arena/sessions/${sessionId}/world/refresh`)).data;
+export const getArenaFilePanel = async (sessionId, path) => (await api.get(`/arena/sessions/${sessionId}/files?path=${encodeURIComponent(path)}`)).data;
+export const getArenaActivity = async (sessionId, minutes = 30) => (await api.get(`/arena/sessions/${sessionId}/activity?minutes=${minutes}`)).data;
+export const checkInArenaWorld = async (sessionId, path) => (await api.post(`/arena/sessions/${sessionId}/checkin`, { path })).data;
+
+export const getArenaRoadmap = async (sessionId) => (await api.get(`/arena/sessions/${sessionId}/roadmap`)).data;
+export const overridePhaseLock = async (sessionId, phaseId, unlocked) =>
+  (await api.post(`/arena/sessions/${sessionId}/phases/${phaseId}/unlock`, { unlocked })).data;
+export const getRoadmapLeaderboard = async (sessionId) =>
+  (await api.get(`/arena/sessions/${sessionId}/leaderboard`)).data;
+export const submitArenaQuest = async (sessionId, questId, evidenceNote) =>
+  (await api.post(`/arena/sessions/${sessionId}/quests/${questId}/submit`, { evidence_note: evidenceNote })).data;
+export const approveArenaQuest = async (sessionId, questId, evidenceNote) =>
+  (await api.post(`/arena/sessions/${sessionId}/quests/${questId}/approve`, { evidence_note: evidenceNote })).data;
+
+// --- IDE APIs ---
+export const getIDEFiles = async (projectId, path = '') => (await api.get(`/ide/projects/${projectId}/files?path=${encodeURIComponent(path)}`)).data;
+export const getIDEFileContent = async (projectId, path) => (await api.get(`/ide/projects/${projectId}/file-content?path=${encodeURIComponent(path)}`)).data;
+export const saveIDEFile = async (projectId, { path, content, author }) => (await api.post(`/ide/projects/${projectId}/file-content`, { path, content, author })).data;
+export const getIDEFileChanges = async (projectId, path = '', minutes = 60) => (await api.get(`/ide/projects/${projectId}/file-changes?path=${encodeURIComponent(path)}&minutes=${minutes}`)).data;
+export const runSecurityScan = async (projectId, { path, content }) => (await api.post(`/ide/projects/${projectId}/security-scan`, { path, content })).data;
+export const getAIAssist = async (projectId, { prompt, file_path, file_content, context }) => (await api.post(`/ide/projects/${projectId}/ai-assist`, { prompt, file_path, file_content, context })).data;
+export const detectConflicts = async (projectId, { path, author, content }) => (await api.post(`/ide/projects/${projectId}/detect-conflicts`, { path, author, content })).data;
+export const postInsight = async (projectId, payload) => (await api.post(`/ide/projects/${projectId}/insights`, payload)).data;
+export const searchInsights = async (projectId, query = '', timeRange = '24h') => (await api.get(`/ide/projects/${projectId}/insights?query=${encodeURIComponent(query)}&time_range=${timeRange}`)).data;
+export const resolveConflict = async (projectId, payload) => (await api.post(`/ide/projects/${projectId}/resolve-conflict`, payload)).data;
+export const createSecurityQuest = async (projectId, payload) => (await api.post(`/ide/projects/${projectId}/security-quest`, payload)).data;
+export const verifySecurityQuest = async (projectId, payload) => (await api.post(`/ide/projects/${projectId}/verify-security-quest`, payload)).data;
+export const listSecurityQuests = async (projectId) => (await api.get(`/ide/projects/${projectId}/security-quests`)).data;
 
 export default api;

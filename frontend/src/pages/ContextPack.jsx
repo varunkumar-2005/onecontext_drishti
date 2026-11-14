@@ -14,6 +14,7 @@ export default function ContextPack({ activeProject, setActiveProject }) {
   // Section 1: Context Pack state
   const [task, setTask] = useState("");
   const [target, setTarget] = useState("chatgpt");
+  const [timeRange, setTimeRange] = useState("all");
   const [maxChars, setMaxChars] = useState(3000);
   const [generatingPack, setGeneratingPack] = useState(false);
   const [packResult, setPackResult] = useState(null);
@@ -81,6 +82,7 @@ export default function ContextPack({ activeProject, setActiveProject }) {
       const res = await getContextPack(selectedProjectId, {
         task: task.trim(),
         target,
+        time_range: timeRange,
         max_chars: parseInt(maxChars, 10) || 3000,
       });
       setPackResult(res);
@@ -209,21 +211,37 @@ export default function ContextPack({ activeProject, setActiveProject }) {
 
             <div style={styles.row}>
               <div style={{ ...styles.field, flex: 1 }}>
-                <label style={styles.label}>Target AI Assistant</label>
+                <label style={styles.label}>Target AI Assistant / Format</label>
                 <select
                   value={target}
                   onChange={(e) => setTarget(e.target.value)}
                   style={styles.select}
                 >
-                  <option value="chatgpt">ChatGPT</option>
-                  <option value="claude">Claude</option>
-                  <option value="cursor">Cursor (Rules format)</option>
-                  <option value="codex">Codex</option>
+                  <option value="codex">Codex (# RULES format)</option>
+                  <option value="chatgpt">ChatGPT (Instructions block)</option>
+                  <option value="gemini">Gemini (&lt;context&gt; tags)</option>
+                  <option value="claude">Claude (&lt;project_context&gt;)</option>
+                  <option value="cursor">Cursor (.cursorrules)</option>
                   <option value="generic">Generic Markdown</option>
                 </select>
               </div>
 
-              <div style={{ ...styles.field, width: "130px" }}>
+              <div style={{ ...styles.field, width: "160px" }}>
+                <label style={styles.label}>Time Filter</label>
+                <select
+                  value={timeRange}
+                  onChange={(e) => setTimeRange(e.target.value)}
+                  style={styles.select}
+                >
+                  <option value="all">Entire History</option>
+                  <option value="1h">Last 1 Hour</option>
+                  <option value="24h">Last 24 Hours</option>
+                  <option value="7d">Last 7 Days</option>
+                  <option value="30d">Last 30 Days</option>
+                </select>
+              </div>
+
+              <div style={{ ...styles.field, width: "110px" }}>
                 <label style={styles.label}>Max Chars</label>
                 <input
                   type="number"
@@ -262,6 +280,15 @@ export default function ContextPack({ activeProject, setActiveProject }) {
                 </button>
               </div>
 
+              {packResult.stats && (
+                <div style={{ display: "flex", gap: "12px", padding: "6px 12px", backgroundColor: "#1e1b4b", borderRadius: "6px", fontSize: "0.8rem", color: "#a5b4fc", margin: "8px 0" }}>
+                  <span>📊 <strong>{packResult.stats.memories_count}</strong> memories</span>
+                  <span>• <strong>{packResult.stats.insights_count}</strong> insights</span>
+                  <span>• <strong>{packResult.stats.decisions_count}</strong> decisions</span>
+                  <span>• ~<strong>{packResult.stats.estimated_tokens}</strong> tokens</span>
+                  <span>• Time filter: <em>{packResult.stats.time_range}</em></span>
+                </div>
+              )}
               <pre style={styles.packCodeBlock}>{packResult.pack}</pre>
 
               {/* Sources Used List */}

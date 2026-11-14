@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import hashlib
 import re
-from typing import List
+from datetime import datetime, timedelta, timezone
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 
 from backend.models.schemas import (
@@ -299,7 +300,7 @@ def ingest_text(
 
 
 @router.post("/ingest-file", response_model=IngestResponse)
-async def ingest_file(
+def ingest_file(
     project_id: str,
     file: UploadFile = File(...),
     source_type: str = Form("doc"),
@@ -314,7 +315,7 @@ async def ingest_file(
             detail="Only .md and .txt files are supported for ingestion.",
         )
 
-    content_bytes = await file.read()
+    content_bytes = file.file.read()
     text = content_bytes.decode("utf-8", errors="replace")
 
     payload = IngestRequest(
@@ -333,19 +334,27 @@ def get_context_pack(
 ) -> ContextPackResponse:
     """
     Generate a compact, accurate context pack formatted for third-party AI assistants.
-    Recalls relevant memories, excludes superseded ones, de-duplicates, and caps to max_chars.
+    Combines Hindsight semantic retrieval with structured event and insight history.
     """
     project = get_project_or_404(project_id)
     bank_id = project["bank_id"]
     project_name = project.get("name", project_id)
 
+    # 1. Semantic retrieval from Hindsight
     recalled = memory_service.recall(
         project_id=project_id,
         bank_id=bank_id,
         query=payload.task,
-        max_results=15,
+        max_results=20,
         include_superseded=False,
     )
+
+    # 2. Time filter calculation
+    time_range = payload.time_range or "all"
+    minutes_map = {"1h": 60, "24h": 1440, "7d": 10080, "30d": 43200}
+    time_limit_iso = None
+    if time_range in minutes_map:
+        time_limit_iso = (datetime.now(timezone.utc) - timedelta(minutes=minutes_map[time_range])).isoformat()
 
     superseded_info = local_db.get_superseded_info(project_id)
     active_memories = []
@@ -367,13 +376,18 @@ def get_context_pack(
         if is_sup:
             continue
 
+        # Check time filter if memory has a timestamp
+        ts = m.get("timestamp") or (m.get("metadata") or {}).get("timestamp")
+        if time_limit_iso and ts and ts < time_limit_iso:
+            continue
+
         norm = m_text.lower()
         if norm in seen_texts:
             continue
         seen_texts.add(norm)
         active_memories.append(m)
 
-    target = payload.target.lower().strip()
+    target = (payload.format or payload.target or "generic").lower().strip()
     formatted_facts = []
 
     for m in active_memories:
@@ -386,14 +400,67 @@ def get_context_pack(
         fact_line = f"- {txt} (source: {src}, by {agent}, {date_str})"
         formatted_facts.append((fact_line, m))
 
+    # 3. Retrieve structured project history & insights from local DB
+    if payload.include_insights:
+        try:
+            with local_db.get_connection() as conn:
+                if time_limit_iso:
+                    rows = conn.execute(
+                        "SELECT event_type, description, source, timestamp FROM ide_insights WHERE project_id = ? AND timestamp > ? ORDER BY timestamp DESC LIMIT 10",
+                        (project_id, time_limit_iso),
+                    ).fetchall()
+                else:
+                    rows = conn.execute(
+                        "SELECT event_type, description, source, timestamp FROM ide_insights WHERE project_id = ? ORDER BY timestamp DESC LIMIT 10",
+                        (project_id,),
+                    ).fetchall()
+
+                for r in rows:
+                    ev_type = r["event_type"].replace("_", " ").upper()
+                    date_str = r["timestamp"][:10] if len(r["timestamp"]) >= 10 else "recent"
+                    line = f"- [{ev_type}] {r['description']} (source: {r['source']}, {date_str})"
+                    formatted_facts.append((line, {
+                        "id": f"ins-{r['timestamp']}",
+                        "text": r["description"],
+                        "source": r["source"],
+                        "type": "insight",
+                    }))
+        except Exception:
+            pass
+
     def build_pack_text(facts_lines: List[str]) -> str:
         facts_block = "\n".join(facts_lines)
-        if target == "cursor":
+        if target == "codex":
+            return (
+                f"# CONTEXT FOR CODEX: {project_name}\n"
+                f"# Verified project architecture and memories relevant to: {payload.task}\n"
+                f"{facts_block}\n"
+                f"[END CONTEXT]\n\n"
+                f"{payload.task}"
+            )
+        elif target == "chatgpt":
+            return (
+                f"[PROJECT CONTEXT: {project_name}]\n"
+                f"You are working on {project_name}. Here is the verified project memory and architecture:\n"
+                f"{facts_block}\n"
+                f"[END CONTEXT]\n\n"
+                f"{payload.task}"
+            )
+        elif target == "gemini":
+            return (
+                f"<context project=\"{project_name}\">\n"
+                f"<!-- Key decisions and architecture for: {payload.task} -->\n"
+                f"{facts_block}\n"
+                f"</context>\n"
+                f"[END CONTEXT]\n\n"
+                f"{payload.task}"
+            )
+        elif target == "cursor":
             return (
                 f"# Cursor Project Rules: {project_name}\n"
                 f"# Key decisions and facts relevant to: {payload.task}\n"
                 f"{facts_block}\n"
-                f"# END RULES\n\n"
+                f"[END CONTEXT]\n\n"
                 f"{payload.task}"
             )
         elif target == "claude":
@@ -401,13 +468,14 @@ def get_context_pack(
                 f"<project_context project=\"{project_name}\">\n"
                 f"Key decisions and facts relevant to: {payload.task}\n"
                 f"{facts_block}\n"
-                f"</project_context>\n\n"
+                f"</project_context>\n"
+                f"[END CONTEXT]\n\n"
                 f"{payload.task}"
             )
         else:
             return (
                 f"[PROJECT CONTEXT: {project_name}]\n"
-                f"Key decisions and facts relevant to: {payload.task}\n"
+                f"Key decisions, architectural constraints, and facts relevant to: {payload.task}\n"
                 f"{facts_block}\n"
                 f"[END CONTEXT]\n\n"
                 f"{payload.task}"
@@ -428,6 +496,15 @@ def get_context_pack(
     if len(final_pack) > payload.max_chars:
         final_pack = final_pack[:payload.max_chars]
 
+    stats = {
+        "memories_count": len([m for m in selected_sources if m.get("type") != "insight"]),
+        "insights_count": len([m for m in selected_sources if m.get("type") == "insight"]),
+        "decisions_count": len([m for m in selected_sources if "decision" in str(m.get("source", "")).lower() or "decision" in str(m.get("type", "")).lower()]),
+        "time_range": time_range,
+        "estimated_tokens": round(len(final_pack) / 4),
+        "target": target,
+    }
+
     return ContextPackResponse(
         project_id=project_id,
         project_name=project_name,
@@ -436,6 +513,7 @@ def get_context_pack(
         sources_used=selected_sources,
         char_count=len(final_pack),
         task=payload.task,
+        stats=stats,
     )
 
 

@@ -7,26 +7,27 @@ export default function Dashboard({ activeProject, setActiveProject }) {
   const [projects, setProjects] = useState([]);
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
+    setLoading(true);
+    setLoadError("");
     try {
       const [projList, healthStatus] = await Promise.all([
         listProjects(),
-        getHealth().catch(() => ({ status: "offline", hindsight: "offline", groq: "offline" })),
+        getHealth().catch(() => null),
       ]);
       setProjects(projList);
       setHealth(healthStatus);
       if (projList.length > 0 && !activeProject) {
-        // Default to seeded project 'apexpay-core' if present, otherwise first
-        const defaultProj = projList.find((p) => p.id === "apexpay-core") || projList[0];
-        setActiveProject(defaultProj);
+        setActiveProject(projList[0]);
       }
     } catch (err) {
-      console.error("Failed to load dashboard data", err);
+      setLoadError(err.response?.data?.detail || err.message || "Could not load projects.");
     } finally {
       setLoading(false);
     }
@@ -57,11 +58,19 @@ export default function Dashboard({ activeProject, setActiveProject }) {
               </option>
             ))}
           </select>
-          <Link to="/projects/new" style={styles.newBtn}>
-            + New Project
+          <Link to="/projects/new" style={styles.newBtn} title="Create a new project memory bank">
+            <span>+</span> Create Project
           </Link>
         </div>
       </div>
+
+      {loading && <p role="status" style={styles.notice}>Loading projects and service health…</p>}
+      {loadError && (
+        <div role="alert" style={styles.errorNotice}>
+          <span>{loadError}</span>
+          <button type="button" onClick={loadData} style={styles.retryBtn}>Retry</button>
+        </div>
+      )}
 
       {/* Metrics Row */}
       <div style={styles.metricsGrid}>
@@ -73,8 +82,8 @@ export default function Dashboard({ activeProject, setActiveProject }) {
 
         <div style={styles.metricCard}>
           <div style={styles.metricLabel}>HINDSIGHT CLOUD</div>
-          <div style={{ ...styles.metricValue, color: "#4ade80" }}>
-            {health?.hindsight === "connected" ? "Connected" : "Disconnected"}
+          <div style={{ ...styles.metricValue, color: health?.hindsight === "connected" ? "#4ade80" : "#fbbf24" }}>
+            {health ? (health.hindsight === "connected" ? "Connected" : "Disconnected") : "Unknown"}
           </div>
           <div style={styles.metricSub}>Vectorize Multi-Strategy Memory</div>
         </div>
@@ -82,14 +91,14 @@ export default function Dashboard({ activeProject, setActiveProject }) {
         <div style={styles.metricCard}>
           <div style={styles.metricLabel}>GROQ INFERENCE</div>
           <div style={{ ...styles.metricValue, color: "#38bdf8" }}>
-            {health?.groq === "connected" ? "openai/gpt-oss-120b" : "Offline"}
+            {health ? (health.groq === "connected" ? "Groq available" : "Disconnected") : "Unknown"}
           </div>
-          <div style={styles.metricSub}>Fallback: qwen/qwen3.8-27b</div>
+          <div style={styles.metricSub}>Chat model service</div>
         </div>
 
         <div style={styles.metricCard}>
           <div style={styles.metricLabel}>TOTAL PROJECTS</div>
-          <div style={styles.metricValue}>{projects.length}</div>
+          <div style={styles.metricValue}>{loading ? "…" : projects.length}</div>
           <div style={styles.metricSub}>Isolated Memory Banks</div>
         </div>
       </div>
@@ -171,10 +180,15 @@ const styles = {
     backgroundColor: "#2563eb",
     color: "#ffffff",
     textDecoration: "none",
-    padding: "8px 14px",
-    borderRadius: "6px",
+    padding: "8px 16px",
+    borderRadius: "8px",
     fontSize: "13px",
-    fontWeight: "600",
+    fontWeight: "700",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    boxShadow: "0 2px 4px rgba(37, 99, 235, 0.35)",
+    whiteSpace: "nowrap",
   },
   metricsGrid: {
     display: "grid",
@@ -207,7 +221,7 @@ const styles = {
   },
   navCardsRow: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
     gap: "18px",
   },
   navCard: {
@@ -234,5 +248,32 @@ const styles = {
     border: "1px solid #27272a",
     borderRadius: "16px",
     padding: "32px",
+  },
+  notice: {
+    margin: 0,
+    color: "#a1a1aa",
+    backgroundColor: "#18181b",
+    border: "1px solid #27272a",
+    borderRadius: "8px",
+    padding: "12px 16px",
+  },
+  errorNotice: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    color: "#fca5a5",
+    backgroundColor: "#7f1d1d40",
+    border: "1px solid #ef444450",
+    borderRadius: "8px",
+    padding: "12px 16px",
+  },
+  retryBtn: {
+    backgroundColor: "#18181b",
+    color: "#e4e4e7",
+    border: "1px solid #3f3f46",
+    borderRadius: "6px",
+    padding: "6px 12px",
+    cursor: "pointer",
   },
 };

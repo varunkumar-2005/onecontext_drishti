@@ -13,18 +13,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from backend.api.agents import router as agents_router
+from backend.api.arena import router as arena_router
 from backend.api.audit import router as audit_router
 from backend.api.memory import router as memory_router
 from backend.api.projects import router as projects_router
 from backend.api.teams import router as teams_router
 from backend.api.rooms import router as rooms_router
+from backend.api.ide import router as ide_router
 from backend.services.github_sync import run_github_polling_worker
 from backend.config import get_settings
 from backend.core.hindsight_client import HindsightWrapper
 from backend.core.llm_client import LLMClient
 from backend.core.memory_service import MemoryService
 from backend.models.schemas import ErrorResponse, HealthResponse
-from backend.storage import local_db
+from backend.storage import arena_db, local_db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("onecontext")
@@ -37,6 +39,7 @@ async def lifespan(app: FastAPI):
 
     # 1. Initialize local SQLite metadata tables
     local_db.init_db()
+    arena_db.init_arena_db()
 
     # 2. Initialize Core clients
     hindsight = HindsightWrapper(settings)
@@ -87,6 +90,8 @@ app.include_router(agents_router)
 app.include_router(audit_router)
 app.include_router(teams_router)
 app.include_router(rooms_router)
+app.include_router(arena_router)
+app.include_router(ide_router)
 
 
 @app.get("/health", response_model=HealthResponse, tags=["System"])

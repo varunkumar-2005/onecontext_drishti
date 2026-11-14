@@ -13,8 +13,10 @@ import { useNavigate } from "react-router-dom";
 import {
   createTeam,
   joinTeam,
-  listProjects,
   createProject,
+  createArenaSession,
+  importArenaRepository,
+  importArenaTasks,
   getRoomEvents,
   getRoomMembers,
   sendHeartbeat,
@@ -56,13 +58,12 @@ export default function LiveRoom({
   setConnectionStatus,
 }) {
   // --- Landing Screen State ---
-  const [projects, setProjects] = useState([]);
-  const [loadingProjects, setLoadingProjects] = useState(false);
   const [createName, setCreateName] = useState("");
-  const [selectedProjectId, setSelectedProjectId] = useState("");
   const [newProjectName, setNewProjectName] = useState("");
   const [githubRepoInput, setGithubRepoInput] = useState("");
-  const [isCreatingProject, setIsCreatingProject] = useState(false);
+  const [tasksFile, setTasksFile] = useState(null);
+  const [defaultTaskXP, setDefaultTaskXP] = useState(100);
+  const [gameTheme, setGameTheme] = useState("Minecraft");
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [joinCodeInput, setJoinCodeInput] = useState("");
   const [joinNameInput, setJoinNameInput] = useState("");
@@ -117,26 +118,6 @@ export default function LiveRoom({
   const sseRef = useRef(null);
   const pollIntervalRef = useRef(null);
   const heartbeatIntervalRef = useRef(null);
-
-  // 1. Initial Load of Projects on Mount
-  useEffect(() => {
-    loadProjectsList();
-  }, []);
-
-  const loadProjectsList = async () => {
-    setLoadingProjects(true);
-    try {
-      const data = await listProjects();
-      setProjects(data);
-      if (data.length > 0 && !selectedProjectId) {
-        setSelectedProjectId(data[0].id);
-      }
-    } catch (err) {
-      console.error("Failed to fetch projects:", err);
-    } finally {
-      setLoadingProjects(false);
-    }
-  };
 
   // 2. Room Event Streaming & Polling Setup
   useEffect(() => {
@@ -282,47 +263,81 @@ export default function LiveRoom({
   // --- Handlers: Landing Screen ---
   const handleCreateRoom = async (e) => {
     e.preventDefault();
-    if (!createName.trim()) return;
+    const projectName = newProjectName.trim();
+    const repoUrl = githubRepoInput.trim();
+    if (!projectName) {
+      setLandingError("Enter a project name.");
+      return;
+    }
+    if (!tasksFile && !repoUrl) {
+      setLandingError("Upload a Markdown task list, enter a GitHub URL, or both.");
+      return;
+    }
+    if (!Number.isInteger(Number(defaultTaskXP)) || Number(defaultTaskXP) < 10 || Number(defaultTaskXP) > 500) {
+      setLandingError("Default task XP must be between 10 and 500.");
+      return;
+    }
+    if (repoUrl) {
+      try {
+        const parsed = new URL(repoUrl);
+        if (parsed.protocol !== "https:" || !["github.com", "www.github.com"].includes(parsed.hostname)) {
+          throw new Error();
+        }
+      } catch {
+        setLandingError("Enter an HTTPS GitHub repository URL.");
+        return;
+      }
+    }
+    if (tasksFile) {
+      const isMarkdown = /\.md$/i.test(tasksFile.name)
+        || ["text/markdown", "text/plain"].includes(tasksFile.type);
+      if (!isMarkdown) {
+        setLandingError("Choose a Markdown task file (.md).");
+        return;
+      }
+      if (tasksFile.size > 1_000_000) {
+        setLandingError("Markdown task files must be 1 MB or smaller.");
+        return;
+      }
+    }
     setCreatingRoom(true);
     setLandingError(null);
+    let arenaSessionCreated = false;
 
     try {
-      let targetProjectId = selectedProjectId;
-
-      if (isCreatingProject) {
-        if (!newProjectName.trim()) {
-          setLandingError("Please enter a name for the new project.");
-          setCreatingRoom(false);
-          return;
-        }
-        const newProj = await createProject({
-          name: newProjectName.trim(),
-          description: "Created with Team Room",
-        });
-        targetProjectId = newProj.id;
-        setActiveProject(newProj);
-      } else {
-        const found = projects.find((p) => p.id === targetProjectId);
-        if (found) setActiveProject(found);
-      }
-
-      // 1. Create Team
-      const team = await createTeam({
-        name: createName.trim(),
-        project_id: targetProjectId,
+      const newProject = await createProject({
+        name: projectName,
+        description: "Created with Team Room project onboarding",
       });
+      setActiveProject(newProject);
 
-      // 2. If GitHub repo specified, configure it
-      if (githubRepoInput.trim()) {
-        try {
-          await configureGitHub(targetProjectId, githubRepoInput.trim());
-        } catch (ghErr) {
-          console.warn("Could not attach GitHub repo:", ghErr);
-        }
+      const creatorName = currentUser || "Host";
+      const details = await createArenaSession({
+        project_id: newProject.id,
+        game_name: gameTheme || "Minecraft",
+        game_description: `A ${gameTheme || "Minecraft"}-style project world built from repository paths and team tasks.`,
+        objective: "Complete and verify the team's project quests.",
+        host_name: creatorName,
+      });
+      const arenaSessionId = details.session.id;
+      arenaSessionCreated = true;
+      localStorage.setItem("onecontext_arena_session_id", arenaSessionId);
+      if (details.arena_token) {
+        localStorage.setItem("onecontext_arena_token", details.arena_token);
       }
 
-      // 3. Auto-join as room creator
-      const creatorName = "Host (" + (currentUser || "Admin") + ")";
+      if (repoUrl) {
+        await importArenaRepository(arenaSessionId, repoUrl);
+      }
+      if (tasksFile) {
+        const markdown = await tasksFile.text();
+        await importArenaTasks(arenaSessionId, markdown, Number(defaultTaskXP));
+      }
+
+      const team = await createTeam({
+        name: createName.trim() || `${projectName} Team`,
+        project_id: newProject.id,
+      });
       await joinTeam({
         join_code: team.join_code,
         display_name: creatorName,
@@ -332,8 +347,12 @@ export default function LiveRoom({
       setCurrentTeam(team);
       localStorage.setItem("onecontext_room", JSON.stringify(team));
       localStorage.setItem("onecontext_user", creatorName);
+      navigate("/arena");
     } catch (err) {
-      setLandingError(err.response?.data?.detail || err.message || "Failed to create room");
+      const detail = err.response?.data?.detail || err.message || "Failed to create project workspace.";
+      setLandingError(arenaSessionCreated
+        ? `Project/Arena setup started but did not finish: ${detail} You can open Arena to inspect the session.`
+        : detail);
     } finally {
       setCreatingRoom(false);
     }
@@ -357,7 +376,7 @@ export default function LiveRoom({
       localStorage.setItem("onecontext_user", joinNameInput.trim());
 
       // Set active project
-      const proj = projects.find((p) => p.id === res.project_id) || {
+      const proj = {
         id: res.project_id,
         name: res.team.name,
       };
@@ -584,82 +603,121 @@ export default function LiveRoom({
             </p>
 
             <form onSubmit={handleCreateRoom} style={styles.form}>
-              <label style={styles.label}>
-                Room Name:
+              <label style={styles.label} htmlFor="project-name">
+                Project Name:
                 <input
+                  id="project-name"
                   type="text"
-                  placeholder="e.g. Payments Core Room"
-                  value={createName}
-                  onChange={(e) => setCreateName(e.target.value)}
+                  placeholder="e.g. Payments Platform"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
                   style={styles.input}
                   required
                 />
               </label>
 
-              <div style={styles.toggleRow}>
-                <button
-                  type="button"
-                  onClick={() => setIsCreatingProject(false)}
-                  style={!isCreatingProject ? styles.toggleBtnActive : styles.toggleBtn}
-                >
-                  Existing Project
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsCreatingProject(true)}
-                  style={isCreatingProject ? styles.toggleBtnActive : styles.toggleBtn}
-                >
-                  New Project
-                </button>
-              </div>
-
-              {!isCreatingProject ? (
-                <label style={styles.label}>
-                  Attach to Project Memory:
-                  <select
-                    value={selectedProjectId}
-                    onChange={(e) => setSelectedProjectId(e.target.value)}
-                    style={styles.select}
-                  >
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.id})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <label style={styles.label}>
-                  New Project Name:
-                  <input
-                    type="text"
-                    placeholder="e.g. ApexPay Platform"
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    style={styles.input}
-                  />
-                </label>
-              )}
-
-              <label style={styles.label}>
-                GitHub Repository (optional):
+              <label style={styles.label} htmlFor="team-room-name">
+                Team Room Name (optional):
                 <input
+                  id="team-room-name"
                   type="text"
-                  placeholder="e.g. acme/payments-api"
+                  placeholder="Defaults to “Project Name Team”"
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  style={styles.input}
+                />
+              </label>
+
+              <label style={styles.label} htmlFor="task-list-file">
+                Upload task list (.md, optional):
+                <input
+                  id="task-list-file"
+                  type="file"
+                  accept=".md,text/markdown,text/plain"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    if (file && file.size > 1_000_000) {
+                      setLandingError("Markdown task files must be 1 MB or smaller.");
+                      e.target.value = "";
+                      setTasksFile(null);
+                      return;
+                    }
+                    setLandingError(null);
+                    setTasksFile(file);
+                  }}
+                  style={styles.input}
+                />
+                <span style={styles.inputHint}>Checklist items and headings become quests. The server parses plain text only.</span>
+              </label>
+
+              <label style={styles.label} htmlFor="default-task-xp">
+                Default XP per task (10–500):
+                <input
+                  id="default-task-xp"
+                  type="number"
+                  min="10"
+                  max="500"
+                  step="1"
+                  value={defaultTaskXP}
+                  onChange={(e) => setDefaultTaskXP(Number(e.target.value))}
+                  style={styles.input}
+                />
+                <span style={styles.inputHint}>An XP value written in the task list overrides this default.</span>
+              </label>
+
+              <label style={styles.label} htmlFor="github-repository">
+                GitHub Repository URL (optional):
+                <input
+                  id="github-repository"
+                  type="text"
+                  placeholder="https://github.com/acme/payments-api"
                   value={githubRepoInput}
                   onChange={(e) => setGithubRepoInput(e.target.value)}
                   style={styles.input}
                 />
-                <span style={styles.inputHint}>Polls commits every 45s into project memory.</span>
+                <span style={styles.inputHint}>Imports repository paths only to build the World; code contents are never fetched.</span>
               </label>
+
+              <div style={{ marginTop: "4px", marginBottom: "8px" }}>
+                <span style={{ ...styles.label, display: "block", marginBottom: "6px" }}>
+                  Arena World Theme:
+                </span>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                  {["Minecraft", "Swordigo", "Cyberpunk", "Zelda", "Sci-Fi"].map((theme) => (
+                    <button
+                      key={theme}
+                      type="button"
+                      onClick={() => setGameTheme(theme)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: "16px",
+                        fontSize: "0.82rem",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        border: gameTheme === theme ? "1px solid #38bdf8" : "1px solid #3f3f46",
+                        backgroundColor: gameTheme === theme ? "#1e1b4b" : "#18181b",
+                        color: gameTheme === theme ? "#38bdf8" : "#a1a1aa",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      {theme === "Minecraft" ? "⛏️ " : theme === "Swordigo" ? "⚔️ " : theme === "Cyberpunk" ? "🌆 " : theme === "Zelda" ? "🛡️ " : "🚀 "}
+                      {theme}
+                    </button>
+                  ))}
+                </div>
+                <span style={styles.inputHint}>
+                  Single input setup: Your tasks and repository initialize both the team memory and the {gameTheme} game world.
+                </span>
+              </div>
 
               <button
                 type="submit"
-                disabled={creatingRoom || !createName.trim()}
+                disabled={creatingRoom || !newProjectName.trim()}
                 style={styles.primaryBtn}
               >
-                {creatingRoom ? "Creating Room..." : "Create Room & Get Code"}
+                {creatingRoom ? "Creating Project & Arena..." : "Create Project, Quests & World"}
               </button>
+              <span style={styles.inputHint}>Provide a task list, a GitHub URL, or both. Imported tasks start at the selected XP and remain unverified until server verification or audited host approval.</span>
             </form>
           </div>
 
@@ -759,7 +817,7 @@ export default function LiveRoom({
             Real-time VS Code style workspace with folder tree, vibe coding, and team chat.
           </p>
           <button
-            onClick={() => navigate("/team")}
+            onClick={() => navigate("/ide")}
             style={styles.openIdeBtn}
           >
             💻 Open Collaborative IDE →
@@ -769,6 +827,30 @@ export default function LiveRoom({
               Active teammates: <strong style={{ color: "#34d399" }}>{onlineNames}</strong>
             </div>
           )}
+        </div>
+
+        {/* Project Arena & Roadmap Launch Action */}
+        <div style={styles.sidebarSection}>
+          <div style={styles.sectionHeaderRow}>
+            <h3 style={styles.sidebarHeading}>Project Arena World</h3>
+            <span style={{ ...styles.countBadge, backgroundColor: "#1e1b4b", color: "#38bdf8", fontWeight: "700" }}>
+              ⚔️ Active
+            </span>
+          </div>
+          <p style={{ fontSize: "0.82rem", color: "#a1a1aa", margin: "0 0 10px 0" }}>
+            Visual game world, quest milestones, and XP leaderboard generated from your project tasks.
+          </p>
+          <button
+            onClick={() => navigate("/arena")}
+            style={{
+              ...styles.openIdeBtn,
+              background: "linear-gradient(135deg, #1e1b4b 0%, #0369a1 100%)",
+              borderColor: "#0284c7",
+              color: "#f0f9ff",
+            }}
+          >
+            ⚔️ Open Project Arena →
+          </button>
         </div>
 
         {/* Member Presence */}

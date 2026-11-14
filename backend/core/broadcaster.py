@@ -43,7 +43,10 @@ class Broadcaster:
             loop = asyncio.get_running_loop()
             loop.create_task(self.broadcast(channel_id, event_data))
         except RuntimeError:
-            pass
+            # Synchronous FastAPI handlers have no running event loop. Queue the
+            # event directly so their already-subscribed SSE clients still see it.
+            for q in list(self._listeners.get(channel_id, set())):
+                q.put_nowait(event_data)
 
 
 broadcaster = Broadcaster()

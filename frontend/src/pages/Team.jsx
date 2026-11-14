@@ -67,6 +67,7 @@ class UserSession(BaseModel):
 - **Forbidden**: Plain legacy session cookies on cross-origin API calls.
 `,
 };
+const SAMPLE_FILE_PATHS = Object.keys(INITIAL_FILES);
 
 export default function Team({ activeProject, setActiveProject, currentTeam, setCurrentTeam }) {
   const [projects, setProjects] = useState([]);
@@ -86,6 +87,7 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
   const [selectedRole, setSelectedRole] = useState("Lead Architect");
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState(null);
+  const [loadingDemo, setLoadingDemo] = useState(false);
 
   // Active Team Room state
   const [members, setMembers] = useState([]);
@@ -96,7 +98,6 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
 
   // IDE Editor state
   const [activeFileName, setActiveFileName] = useState("auth/login_service.py");
-  const [codeFiles, setCodeFiles] = useState(INITIAL_FILES);
   const [aiPrompt, setAiPrompt] = useState("Update login logic to enforce 15-minute RS256 JWT tokens and mandate TOTP MFA");
   const [generatingCode, setGeneratingCode] = useState(false);
   const [generationStep, setGenerationStep] = useState("");
@@ -137,7 +138,7 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
 
   // Auto scroll chat to bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }, [messages]);
 
   const loadProjects = async () => {
@@ -180,22 +181,20 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
         project_id: selectedProjectId,
       });
       setLastCreatedCode(newTeam.join_code);
-      if (setCurrentTeam) setCurrentTeam(newTeam);
-
-      // Auto-join creator as initial member
-      await joinTeam({
+      const joined = await joinTeam({
         join_code: newTeam.join_code,
-        display_name: displayName || "Varun",
+        display_name: displayName.trim(),
       });
-
-      // Seed 4 teammates for immediate demo readiness
-      await seedTeamDemo(newTeam.id);
+      if (setCurrentTeam) setCurrentTeam(newTeam);
+      localStorage.setItem("onecontext_room", JSON.stringify(newTeam));
+      localStorage.setItem("onecontext_user", displayName.trim());
 
       const targetProj = projects.find((p) => p.id === newTeam.project_id);
       if (targetProj && setActiveProject) {
         setActiveProject(targetProj);
       }
 
+      setMembers([joined.member]);
       fetchMembersAndMessages(newTeam.id);
     } catch (err) {
       setCreateError(err.response?.data?.detail || err.message || "Failed to create team room");
@@ -217,9 +216,8 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
       });
 
       if (setCurrentTeam) setCurrentTeam(res.team);
-
-      // Ensure demo members are seeded
-      await seedTeamDemo(res.team.id);
+      localStorage.setItem("onecontext_room", JSON.stringify(res.team));
+      localStorage.setItem("onecontext_user", displayName.trim());
 
       const targetProj = projects.find((p) => p.id === res.project_id) || {
         id: res.project_id,
@@ -235,6 +233,20 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
       setJoinError(err.response?.data?.detail || err.message || "Invalid join code");
     } finally {
       setJoining(false);
+    }
+  };
+
+  const handleLoadDemoCollaborators = async () => {
+    if (!currentTeam?.id) return;
+    setLoadingDemo(true);
+    setJoinError(null);
+    try {
+      await seedTeamDemo(currentTeam.id);
+      await fetchMembersAndMessages(currentTeam.id);
+    } catch (err) {
+      setJoinError(err.response?.data?.detail || err.message || "Could not load demo collaborators.");
+    } finally {
+      setLoadingDemo(false);
     }
   };
 
@@ -268,35 +280,27 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
 
     setGeneratingCode(true);
     setAgentVerdict(null);
-    setGenerationStep("1. Recalling institutional memory rules from Hindsight bank...");
+    setGenerationStep("1. Retrieving relevant project memory...");
 
     try {
       // Step 2 simulation label
       setTimeout(() => {
-        setGenerationStep("2. Groq LLM synthesizing new code with policy constraints...");
+        setGenerationStep("2. Generating a suggestion from the prompt...");
       }, 900);
 
       // Step 3 simulation label
       setTimeout(() => {
-        setGenerationStep("3. Running Validator Agent to inspect draft against past ADRs...");
+        setGenerationStep("3. Checking the suggestion against recorded project memory...");
       }, 2200);
 
       const res = await generateTeamCode(currentTeam.id, {
         instruction: promptToUse.trim(),
-        current_code: codeFiles[activeFileName],
+        current_code: "",
         filename: activeFileName,
         author: displayName || "Alice (Auth Specialist)",
       });
 
-      // Update actual code in editor!
-      if (res.new_code) {
-        setCodeFiles((prev) => ({
-          ...prev,
-          [activeFileName]: res.new_code,
-        }));
-      }
-
-      setAgentVerdict(res);
+      setAgentVerdict({ ...res, new_code: undefined });
       fetchMembersAndMessages(currentTeam.id);
     } catch (err) {
       console.error("Agent code action error:", err);
@@ -324,9 +328,9 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
     return (
       <div style={styles.container}>
         <div style={styles.header}>
-          <h1 style={styles.title}>Team Room & Vibe Coding Workspace</h1>
+          <h1 style={styles.title}>Team Room <span style={styles.demoBadge}>CHAT + IDE DEMO</span></h1>
           <p style={styles.subtitle}>
-            Connect 4 parallel team members to a unified institutional memory bank. Real-time chat, live code sync, and instant policy broadcasts.
+            Create or join a chat room linked to a project memory bank. The editor uses sample paths only; it does not open, change, or save your repository files.
           </p>
         </div>
 
@@ -334,13 +338,14 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
           {/* Create Team Room */}
           <div style={styles.setupCard}>
             <h2 style={styles.cardTitle}>Create New Team Room</h2>
-            <p style={styles.cardDesc}>Provisions an isolated team room with a 6-character code and pre-loaded 4-collaborator demo team.</p>
+            <p style={styles.cardDesc}>Creates a room and join code. Demo collaborators are optional and are not added automatically.</p>
             {createError && <div style={styles.errorBox}>⚠️ {createError}</div>}
 
             <form onSubmit={handleCreateTeam} style={styles.form}>
               <div style={styles.field}>
-                <label style={styles.label}>Team Room Name *</label>
+                <label htmlFor="team-room-name" style={styles.label}>Team Room Name *</label>
                 <input
+                  id="team-room-name"
                   type="text"
                   required
                   value={createName}
@@ -378,9 +383,12 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
                 />
               </div>
 
-              <button type="submit" disabled={creating} style={styles.btnPrimary}>
-                {creating ? "Setting up Team Workspace..." : "Create Team Room & Launch IDE"}
+              <button type="submit" disabled={creating || loadingProjects || projects.length === 0} style={styles.btnPrimary}>
+                {creating ? "Creating Team Room..." : "Create Team Room"}
               </button>
+              {projects.length === 0 && !loadingProjects && (
+                <p style={styles.formHint}>Create a project first, then return here to make a team room.</p>
+              )}
             </form>
           </div>
 
@@ -440,9 +448,13 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
     );
   }
 
-  // ACTIVE TEAM ROOM: VS CODE STYLE LIVE COLLABORATIVE IDE
+  // ACTIVE TEAM ROOM: chat plus an explicitly labeled sample-only editor.
   return (
     <div style={styles.ideContainer}>
+      <div style={styles.demoNotice} role="note">
+        <strong>DEMO WORKSPACE — not your repository.</strong> The editor paths are examples only. This page does not load, display, or save project source files.
+      </div>
+      {joinError && <div style={styles.errorBox} role="alert">⚠️ {joinError}</div>}
       {/* Top VS Code Window Bar */}
       <div style={styles.ideTopBar}>
         <div style={styles.ideTitleRow}>
@@ -471,6 +483,9 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
             <span style={styles.presenceLabel}>
               ACTIVE TEAMMATES ({members.filter((m) => m.online).length} ONLINE):
             </span>
+            <button type="button" onClick={handleLoadDemoCollaborators} disabled={loadingDemo} style={styles.demoButton}>
+              {loadingDemo ? "Loading demo…" : "Load SIMULATED demo teammates"}
+            </button>
           </div>
 
           <div style={styles.avatarList}>
@@ -513,7 +528,7 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
         <div style={styles.editorPane}>
           {/* File Tabs */}
           <div style={styles.fileTabs}>
-            {Object.keys(codeFiles).map((fname) => (
+            {SAMPLE_FILE_PATHS.map((fname) => (
               <button
                 key={fname}
                 onClick={() => setActiveFileName(fname)}
@@ -532,7 +547,7 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
           {/* REAL AI AGENT PROMPT & ACTION BAR */}
           <div style={styles.agentPromptBar}>
             <div style={styles.promptHeader}>
-              <span style={styles.aiLabel}>⚡ AUTONOMOUS AGENT REWRITE (GROQ + HINDSIGHT):</span>
+              <span style={styles.aiLabel}>⚡ SIMULATED FILE SUGGESTION (Groq + project memory):</span>
               <span style={styles.authorBadge}>Acting as: <strong>{displayName}</strong></span>
             </div>
 
@@ -541,7 +556,7 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
                 type="text"
                 value={aiPrompt}
                 onChange={(e) => setAiPrompt(e.target.value)}
-                placeholder="Instruct the agent to rewrite logic (e.g. 'Enforce 15-minute RS256 JWT tokens with TOTP MFA')..."
+                placeholder="Describe a change to discuss against project memory..."
                 style={styles.aiInput}
                 disabled={generatingCode}
               />
@@ -550,7 +565,7 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
                 disabled={generatingCode || !aiPrompt.trim()}
                 style={styles.runAgentBtn}
               >
-                {generatingCode ? "Agent Reasoning..." : "🚀 Synthesize & Validate"}
+                {generatingCode ? "Generating demo suggestion…" : "🚀 Generate demo suggestion"}
               </button>
             </div>
 
@@ -595,7 +610,7 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
             <div style={styles.thinkingDrawer}>
               <div style={styles.spinnerRow}>
                 <span style={styles.pulseDot} />
-                <strong style={{ color: "#60a5fa" }}>Autonomous Agent Reasoning:</strong>
+                <strong style={{ color: "#60a5fa" }}>Demo suggestion:</strong>
                 <span>{generationStep}</span>
               </div>
             </div>
@@ -612,9 +627,9 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span>
-                  {agentVerdict.validation?.valid ? "✅ VALIDATOR GUARDRAIL: PASSED (ZERO REGRESSIONS)" : "❌ VALIDATOR GUARDRAIL: CONTRADICTION DETECTED"}
+                  {agentVerdict.validation?.valid ? "✅ Memory check: no recorded conflict found" : "⚠️ Memory check: possible conflict"}
                 </span>
-                <span style={{ fontSize: "0.75rem", opacity: 0.85 }}>Broadcasted to Team Chat & Memory</span>
+                <span style={{ fontSize: "0.75rem", opacity: 0.85 }}>Not applied to source files or test-verified</span>
               </div>
               <div style={{ fontSize: "0.8rem", marginTop: "4px", color: "#f4f4f5" }}>
                 {agentVerdict.explanation}
@@ -629,22 +644,9 @@ export default function Team({ activeProject, setActiveProject, currentTeam, set
             </div>
           )}
 
-          {/* Code Text Area */}
-          <div style={styles.codeEditorContainer}>
-            <div style={styles.lineNumbers}>
-              {Array.from({ length: 34 }).map((_, i) => (
-                <div key={i}>{i + 1}</div>
-              ))}
-            </div>
-            <textarea
-              value={codeFiles[activeFileName]}
-              onChange={(e) => {
-                const val = e.target.value;
-                setCodeFiles((prev) => ({ ...prev, [activeFileName]: val }));
-              }}
-              style={styles.codeArea}
-              spellCheck={false}
-            />
+          <div style={styles.sampleFileNotice} role="note">
+            <strong>{activeFileName}</strong>
+            <span>Sample path only. Source text is not displayed, and generated suggestions are not applied to repository files.</span>
           </div>
         </div>
 
@@ -777,6 +779,52 @@ const styles = {
     color: "#a1a1aa",
     margin: 0,
     lineHeight: "1.5",
+  },
+  demoBadge: {
+    display: "inline-block",
+    marginLeft: "8px",
+    borderRadius: "12px",
+    padding: "3px 8px",
+    backgroundColor: "#713f1226",
+    color: "#fbbf24",
+    fontSize: "0.62rem",
+    verticalAlign: "middle",
+    letterSpacing: "0.04em",
+  },
+  formHint: {
+    color: "#fbbf24",
+    fontSize: "0.8rem",
+    margin: 0,
+  },
+  demoNotice: {
+    gridColumn: "1 / -1",
+    padding: "12px 16px",
+    border: "1px solid #854d0e",
+    borderRadius: "8px",
+    backgroundColor: "#422006",
+    color: "#fde68a",
+    lineHeight: 1.5,
+  },
+  demoButton: {
+    border: "1px solid #854d0e",
+    borderRadius: "6px",
+    backgroundColor: "#422006",
+    color: "#fde68a",
+    padding: "6px 10px",
+    cursor: "pointer",
+    fontSize: "0.75rem",
+  },
+  sampleFileNotice: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    minHeight: "220px",
+    justifyContent: "center",
+    padding: "24px",
+    backgroundColor: "#09090b",
+    color: "#a1a1aa",
+    fontSize: "0.9rem",
+    lineHeight: 1.6,
   },
   setupGrid: {
     display: "grid",

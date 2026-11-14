@@ -264,7 +264,10 @@ class IngestResponse(BaseModel):
 
 class ContextPackRequest(BaseModel):
     task: str = Field(..., description="Task or prompt the assistant will perform")
-    target: str = Field(default="generic", description="Target assistant: chatgpt | claude | cursor | codex | generic")
+    target: str = Field(default="generic", description="Target assistant: chatgpt | claude | cursor | codex | gemini | generic")
+    format: Optional[str] = Field(default=None, description="Output format: codex | chatgpt | gemini | markdown | generic")
+    time_range: Optional[str] = Field(default="all", description="Time filter: 1h | 24h | 7d | 30d | all")
+    include_insights: Optional[bool] = Field(default=True, description="Whether to include recent technical insights")
     max_chars: int = Field(default=3000, ge=100, description="Maximum characters allowed in the context pack")
 
 
@@ -276,6 +279,7 @@ class ContextPackResponse(BaseModel):
     sources_used: List[Dict[str, Any]] = []
     char_count: int
     task: str
+    stats: Optional[Dict[str, Any]] = None
 
 
 class CaptureRequest(BaseModel):

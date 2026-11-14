@@ -3,10 +3,10 @@ import { askMemory, askWithoutMemory } from "../api/client";
 import MemoryCard from "./MemoryCard";
 
 const SAMPLE_QUESTIONS = [
-  "What approval is needed for a $15,000 transfer?",
-  "Which database engine and primary key convention do we standardize on?",
-  "What was the lesson from the database connection pool exhaustion incident?",
-  "Why did we choose RabbitMQ over Kafka?",
+  "What architecture decisions are recorded for this project?",
+  "What constraints should a new contributor know?",
+  "Which known risks or unresolved questions are documented?",
+  "What guidance is recorded about testing and releases?",
 ];
 
 export default function BeforeAfterPanel({ projectId }) {
@@ -43,8 +43,7 @@ export default function BeforeAfterPanel({ projectId }) {
         <div style={styles.badge}>DEMO CENTERPIECE</div>
         <h2 style={styles.title}>The Before / After Comparison</h2>
         <p style={styles.subtitle}>
-          Compare an LLM answering <strong>without project memory</strong> against the same question answered using{" "}
-          <strong>OneContext + Hindsight shared memory</strong>.
+          Compare the same model question with and without retrieved project memory. This is an illustrative demo, not a benchmark; generated answers may be incorrect.
         </p>
       </div>
 
@@ -93,7 +92,7 @@ export default function BeforeAfterPanel({ projectId }) {
           <div style={styles.colHeader}>
             <div style={styles.colBadgeNo}>BEFORE</div>
             <h3 style={styles.colTitle}>Without Memory</h3>
-            <span style={styles.colDesc}>Generic AI Guesswork & Hallucination</span>
+            <span style={styles.colDesc}>No retrieved project memories</span>
           </div>
 
           <div style={styles.answerBox}>
@@ -118,7 +117,7 @@ export default function BeforeAfterPanel({ projectId }) {
           <div style={styles.colHeader}>
             <div style={styles.colBadgeYes}>AFTER</div>
             <h3 style={styles.colTitle}>With OneContext Memory</h3>
-            <span style={styles.colDesc}>Grounded via Hindsight & Dual Verification</span>
+            <span style={styles.colDesc}>Uses retrieved project memories as context</span>
           </div>
 
           <div style={styles.answerBox}>

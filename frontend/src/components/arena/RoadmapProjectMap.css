@@ -1,0 +1,933 @@
+/* ==========================================================================
+   Project Roadmap Quest - Cartoon RPG Game Theme Styling
+   ========================================================================== */
+
+.roadmap-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  min-height: calc(100vh - 120px);
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  user-select: none;
+}
+
+/* --- Top Header Plaque --- */
+.roadmap-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 12px;
+  flex-wrap: wrap;
+}
+
+.roadmap-header-plaque {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  padding: 8px 36px;
+  background: linear-gradient(180deg, #9a5322 0%, #683011 50%, #461f0a 100%);
+  border: 4px solid #321404;
+  border-radius: 14px;
+  box-shadow:
+    0 6px 0 #200a02,
+    0 10px 20px rgba(0, 0, 0, 0.6),
+    inset 0 2px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.roadmap-header-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #ffdf79;
+  text-shadow:
+    0 2px 0 #7c3f15,
+    0 4px 0 #3a1803,
+    0 6px 10px rgba(0, 0, 0, 0.7);
+}
+
+.roadmap-header-counters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.roadmap-counter-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(180deg, #7c3aed 0%, #5b21b6 100%);
+  border: 2px solid #a78bfa;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.roadmap-counter-badge:hover,
+.roadmap-counter-badge:focus-visible {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+  outline: none;
+}
+
+.roadmap-counter-badge.is-gold {
+  background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+  border-color: #fde68a;
+  color: #fffbeb;
+}
+
+/* --- Top Roadmap Progress Bar --- */
+.roadmap-progress-bar-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 900px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 8px 18px;
+  background: linear-gradient(180deg, #422006 0%, #291203 100%);
+  border: 3px solid #1a0a02;
+  border-radius: 30px;
+  box-shadow:
+    0 4px 0 #120601,
+    0 8px 24px rgba(0, 0, 0, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.15);
+}
+
+.roadmap-bar-label {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: #fef08a;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+
+.roadmap-bar-icon-start,
+.roadmap-bar-icon-end {
+  font-size: 22px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.roadmap-track-container {
+  position: relative;
+  flex: 1;
+  height: 20px;
+  background: #0f172a;
+  border: 2px solid #334155;
+  border-radius: 12px;
+  overflow: visible;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
+}
+
+.roadmap-track-fill {
+  height: 100%;
+  border-radius: 9px;
+  background: linear-gradient(90deg, #0284c7 0%, #06b6d4 50%, #22c55e 100%);
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.6);
+  transition: width 0.4s ease-out;
+}
+
+/* Teammate pins along progress bar */
+.roadmap-bar-pin {
+  position: absolute;
+  top: -24px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.roadmap-bar-pin:hover,
+.roadmap-bar-pin:focus-visible {
+  transform: translateX(-50%) translateY(-4px) scale(1.15);
+  outline: none;
+}
+
+.roadmap-pin-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid #ffdf79;
+  background: #3b82f6;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.roadmap-pin-pointer {
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #ffdf79;
+  margin-top: -1px;
+}
+
+/* --- Map Viewport --- */
+.roadmap-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 580px;
+  border-radius: 16px;
+  border: 3px solid #1e293b;
+  overflow: hidden;
+  background: #38bdf8;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+}
+
+.roadmap-svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: 580px;
+  margin: 0 auto;
+}
+
+/* --- Left Floating Quest Log Card --- */
+.roadmap-quest-log-overlay {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: min(260px, calc(100% - 32px));
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #fdf8eb 0%, #f7eccb 100%);
+  border: 4px solid #5c2c16;
+  border-radius: 16px;
+  box-shadow:
+    0 6px 0 #321404,
+    0 12px 24px rgba(0, 0, 0, 0.45);
+  color: #3e200c;
+  z-index: 20;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.roadmap-quest-log-overlay.is-minimized {
+  transform: translateX(-240px);
+  opacity: 0.8;
+}
+
+.roadmap-quest-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  border-top-left-radius: 11px;
+  border-top-right-radius: 11px;
+  color: #ffffff;
+  border-bottom: 2px solid #1e3a8a;
+}
+
+.roadmap-quest-log-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.roadmap-quest-log-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: #ef4444;
+  border: 2px solid #b91c1c;
+  border-radius: 50%;
+  color: white;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.roadmap-quest-log-close:hover {
+  background: #dc2626;
+}
+
+.roadmap-quest-log-body {
+  padding: 10px 12px 14px;
+  max-height: 440px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.roadmap-log-section-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #78350f;
+  border-bottom: 1px solid #d97706;
+  padding-bottom: 2px;
+}
+
+.roadmap-log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.roadmap-log-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid #e2d3b4;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #451a03;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.roadmap-log-item:hover,
+.roadmap-log-item:focus-visible {
+  background: #ffffff;
+  transform: translateX(2px);
+  outline: 2px solid #3b82f6;
+}
+
+.roadmap-log-badge {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 900;
+  color: white;
+}
+
+.roadmap-log-badge.is-done {
+  background: #22c55e;
+  border: 1px solid #15803d;
+}
+
+.roadmap-log-badge.is-active {
+  background: #3b82f6;
+  border: 1px solid #1d4ed8;
+}
+
+.roadmap-log-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.roadmap-log-xp {
+  font-size: 10px;
+  font-weight: 800;
+  color: #b45309;
+}
+
+/* Floating Achievements Banner */
+.roadmap-achievements-banner {
+  position: absolute;
+  top: 96px;
+  left: 290px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: linear-gradient(180deg, #9a5322 0%, #683011 100%);
+  border: 3px solid #321404;
+  border-radius: 12px;
+  color: #ffdf79;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  z-index: 15;
+  transition: transform 0.15s ease;
+}
+
+.roadmap-achievements-banner:hover {
+  transform: translateY(-2px);
+}
+
+/* --- SVG Interactive Elements --- */
+.roadmap-landmark-group {
+  cursor: pointer;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.roadmap-landmark-group:hover,
+.roadmap-landmark-group:focus-visible {
+  filter: drop-shadow(0 0 10px #ffdf79);
+  outline: none;
+}
+
+.roadmap-signboard {
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.roadmap-signboard:hover,
+.roadmap-signboard:focus-visible {
+  transform: scale(1.06);
+  outline: none;
+}
+
+.roadmap-cloud {
+  animation: roadmapCloudDrift 36s linear infinite;
+}
+
+@keyframes roadmapCloudDrift {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(25px); }
+  100% { transform: translateX(0); }
+}
+
+.roadmap-bounce {
+  animation: roadmapPinBounce 2.4s ease-in-out infinite;
+}
+
+@keyframes roadmapPinBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.roadmap-portal-purple {
+  animation: portalPulsePurple 3s ease-in-out infinite alternate;
+}
+
+@keyframes portalPulsePurple {
+  0% { filter: drop-shadow(0 0 6px #a855f7); opacity: 0.85; }
+  100% { filter: drop-shadow(0 0 16px #d8b4fe); opacity: 1; }
+}
+
+.roadmap-portal-cyan {
+  animation: portalPulseCyan 3s ease-in-out infinite alternate;
+}
+
+@keyframes portalPulseCyan {
+  0% { filter: drop-shadow(0 0 6px #06b6d4); opacity: 0.85; }
+  100% { filter: drop-shadow(0 0 16px #67e8f9); opacity: 1; }
+}
+
+.roadmap-radar-pulse {
+  animation: radarDishRotate 4s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+
+@keyframes radarDishRotate {
+  0% { transform: rotate(-8deg); }
+  100% { transform: rotate(8deg); }
+}
+
+/* --- Bottom Action Dock --- */
+.roadmap-dock {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+  padding: 8px 18px;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border: 3px solid #334155;
+  border-radius: 40px;
+  box-shadow:
+    0 8px 0 #020617,
+    0 16px 32px rgba(0, 0, 0, 0.6);
+  z-index: 25;
+}
+
+.roadmap-dock-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid #475569;
+  background: #1e293b;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.15s ease, background 0.15s ease;
+}
+
+.roadmap-dock-btn:hover,
+.roadmap-dock-btn:focus-visible {
+  transform: translateY(-4px) scale(1.12);
+  outline: none;
+  filter: brightness(1.2);
+}
+
+.roadmap-dock-btn.is-primary {
+  background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%);
+  border-color: #fef08a;
+  width: 52px;
+  height: 52px;
+  font-size: 24px;
+}
+
+.roadmap-dock-btn.is-purple {
+  background: linear-gradient(180deg, #a855f7 0%, #7e22ce 100%);
+  border-color: #e9d5ff;
+}
+
+.roadmap-dock-btn.is-cyan {
+  background: linear-gradient(180deg, #06b6d4 0%, #0e7490 100%);
+  border-color: #cffafe;
+}
+
+/* --- Phase Quest Drawer --- */
+.roadmap-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.roadmap-drawer {
+  width: 480px;
+  max-width: 90vw;
+  height: 100%;
+  background: #0f172a;
+  border-left: 3px solid #334155;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: drawerSlideIn 0.25s ease-out;
+}
+
+@keyframes drawerSlideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.roadmap-drawer-header {
+  padding: 18px 20px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.roadmap-drawer-title-group h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffdf79;
+}
+
+.roadmap-drawer-subtitle {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.roadmap-drawer-close {
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  color: #f8fafc;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.roadmap-drawer-close:hover {
+  background: #475569;
+}
+
+.roadmap-drawer-body {
+  padding: 18px 20px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.roadmap-drawer-stats-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #1e293b;
+  border-radius: 10px;
+  border: 1px solid #334155;
+}
+
+.roadmap-lock-alert {
+  padding: 12px 14px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  color: #fca5a5;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.roadmap-unlock-override-btn {
+  align-self: flex-start;
+  padding: 6px 12px;
+  background: #f59e0b;
+  border: none;
+  border-radius: 6px;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.roadmap-unlock-override-btn:hover {
+  background: #d97706;
+}
+
+.roadmap-quest-card {
+  padding: 14px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s ease;
+}
+
+.roadmap-quest-card:hover {
+  border-color: #64748b;
+}
+
+.roadmap-quest-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.roadmap-quest-titles h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.roadmap-quest-themed {
+  font-size: 12px;
+  color: #38bdf8;
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.roadmap-quest-xp-badge {
+  padding: 3px 8px;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid #f59e0b;
+  border-radius: 12px;
+  color: #fde68a;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.roadmap-quest-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #94a3b8;
+  flex-wrap: wrap;
+}
+
+.roadmap-quest-status-badge {
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.roadmap-quest-status-badge.is-available {
+  background: #334155;
+  color: #cbd5e1;
+}
+
+.roadmap-quest-status-badge.is-claimed {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid #3b82f6;
+  color: #93c5fd;
+}
+
+.roadmap-quest-status-badge.is-submitted {
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid #a855f7;
+  color: #d8b4fe;
+}
+
+.roadmap-quest-status-badge.is-verified {
+  background: rgba(34, 197, 94, 0.2);
+  border: 1px solid #22c55e;
+  color: #86efac;
+}
+
+.roadmap-host-approved-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #14532d;
+  border: 1px solid #22c55e;
+  border-radius: 6px;
+  color: #86efac;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.roadmap-quest-action-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.roadmap-btn-claim {
+  padding: 6px 14px;
+  background: #3b82f6;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.roadmap-btn-claim:hover {
+  background: #2563eb;
+}
+
+.roadmap-btn-submit {
+  padding: 6px 14px;
+  background: #8b5cf6;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.roadmap-btn-submit:hover {
+  background: #7c3aed;
+}
+
+.roadmap-btn-approve {
+  padding: 6px 14px;
+  background: #16a34a;
+  border: 2px solid #4ade80;
+  border-radius: 6px;
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.4);
+}
+
+.roadmap-btn-approve:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.roadmap-btn-approve:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #6b7280;
+}
+
+.roadmap-evidence-input {
+  flex: 1;
+  min-width: 180px;
+  padding: 6px 10px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #f8fafc;
+  font-size: 12px;
+}
+
+.roadmap-evidence-input:focus {
+  outline: none;
+  border-color: #38bdf8;
+}
+
+/* Modals (Leaderboard, Achievements, Import) */
+.roadmap-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.75);
+  backdrop-filter: blur(4px);
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.roadmap-modal {
+  width: 540px;
+  max-width: 100%;
+  max-height: 85vh;
+  background: #0f172a;
+  border: 2px solid #334155;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalScaleIn 0.2s ease-out;
+}
+
+@keyframes modalScaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.roadmap-modal-header {
+  padding: 16px 20px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.roadmap-modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffdf79;
+}
+
+.roadmap-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.roadmap-leader-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+}
+
+.roadmap-leader-rank {
+  font-size: 16px;
+  font-weight: 900;
+  width: 28px;
+  text-align: center;
+}
+
+.roadmap-leader-info {
+  flex: 1;
+}
+
+.roadmap-leader-name {
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.roadmap-leader-quests {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.roadmap-leader-xp {
+  font-size: 14px;
+  font-weight: 900;
+  color: #f59e0b;
+}
+
+.roadmap-import-textarea {
+  width: 100%;
+  height: 220px;
+  padding: 12px;
+  background: #020617;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #f8fafc;
+  font-family: monospace;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.roadmap-import-textarea:focus {
+  outline: none;
+  border-color: #38bdf8;
+}
+
+.roadmap-preview-box {
+  padding: 12px;
+  background: #1e293b;
+  border-radius: 8px;
+  border: 1px dashed #475569;
+  font-size: 13px;
+}

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OneContext Arena</title>
+<style>
+:root{--bg0:#0b1220;--bg1:#121b33;--panel:#0f1830;--panel2:#16213f;--line:#243154;--ink:#eaf0ff;--mut:#8fa0c7;--gold:#f2b705;--green:#3ecf6a;--red:#e2473a;--blue:#4d8dff;--purple:#9a5cd6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root[data-theme="light"]{--bg0:#eef2fb;--bg1:#dbe4fb;--panel:#fff;--panel2:#f3f6ff;--line:#d7deef;--ink:#131a2c;--mut:#5c6786}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg0);color:var(--ink);font-family:"Segoe UI",system-ui,sans-serif;font-size:14px}
+a{color:inherit}
+.app{display:grid;grid-template-columns:230px 1fr;min-height:100%}
+nav.side{background:var(--panel);border-right:1px solid var(--line);padding:14px 12px;display:flex;flex-direction:column;gap:4px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;padding:4px 8px 14px}
+.cube{width:26px;height:26px;background:linear-gradient(135deg,#5fb33b,#3e8a24);border-radius:4px;box-shadow:inset -3px -3px 0 rgba(0,0,0,.25),inset 3px 3px 0 rgba(255,255,255,.2)}
+.nav-btn{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--mut);cursor:pointer;font-weight:600;border:1px solid transparent}
+.nav-btn:hover{background:var(--panel2)}
+.nav-btn.on{background:linear-gradient(90deg,#3659c7,#2c47a0);color:#fff;border-color:#3659c7}
+.nav-ico{width:18px;text-align:center}
+.mtabs{display:none}
+@media(max-width:980px){.mtabs{display:flex;gap:6px;padding:10px 14px;overflow-x:auto;background:var(--panel);border-bottom:1px solid var(--line)}.mbtn{border:1px solid var(--line);background:var(--panel2);color:var(--mut);padding:7px 14px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}.mbtn.on{background:#2c47a0;color:#fff;border-color:#2c47a0}}
+.me{margin-top:auto;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px}
+.row{display:flex;align-items:center;gap:8px}
+.sp{flex:1}
+.pix{width:30px;height:30px;border-radius:6px;flex:none}
+.xpmini{height:6px;background:#1c2744;border-radius:3px;margin-top:6px;overflow:hidden}
+.xpmini i{display:block;height:100%;background:linear-gradient(90deg,#58d26a,#2fae52)}
+main{min-width:0}
+header.top{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+.tag{font-size:11px;color:var(--mut);border:1px solid var(--line);padding:2px 8px;border-radius:20px}
+.live{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green);font-weight:700}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.wrap{padding:16px 18px;max-width:1400px;margin:0 auto}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px}
+@media(max-width:980px){.grid2{grid-template-columns:1fr}nav.side{display:none}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+.card h2{font-size:12px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:700}
+.sky{position:relative;border-radius:14px;overflow:hidden;background:radial-gradient(ellipse at 30% 0%,#1b2b5c,#0a1226 70%);border:1px solid var(--line)}
+.sky svg{display:block;width:100%;height:auto}
+.hud{position:absolute;top:10px;left:10px;right:10px;display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;pointer-events:none}
+.hud .card{pointer-events:auto;backdrop-filter:blur(6px);background:rgba(15,24,48,.78)}
+.barbig{width:220px}
+.pbar{height:14px;background:#1c2744;border-radius:7px;overflow:hidden;border:1px solid #2a3a66}
+.pbar i{display:block;height:100%;background:linear-gradient(90deg,#58d26a,#2fae52)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
+.chip.hi{background:rgba(226,71,58,.18);color:#ff8a7d}
+.chip.med{background:rgba(242,183,5,.18);color:#ffd257}
+.chip.lo{background:rgba(62,207,106,.18);color:#7bf0a0}
+.chip.sec{background:rgba(154,92,214,.18);color:#cfa6ff}
+.chip.feat{background:rgba(77,141,255,.18);color:#9dc0ff}
+.chip.conf{background:rgba(226,71,58,.18);color:#ff8a7d}
+.qrow{display:flex;align-items:center;gap:10px;padding:10px 6px;border-bottom:1px solid var(--line)}
+.qrow:last-child{border-bottom:none}
+.qicon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex:none}
+.qicon.pr{background:rgba(77,141,255,.18);color:#9dc0ff}
+.qicon.iss{background:rgba(242,183,5,.18);color:#ffd257}
+.qtitle{font-weight:700}
+.qmeta{font-size:12px;color:var(--mut);margin-top:2px}
+.agent-line{font-size:11.5px;color:#cfa6ff;margin-top:3px;display:flex;gap:5px;align-items:center}
+.take{border:none;background:linear-gradient(90deg,#3ecf6a,#28a854);color:#06210f;font-weight:800;font-size:12px;padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.take:hover{filter:brightness(1.08)}
+.tabs2{display:flex;gap:6px;margin-bottom:10px}
+.tabs2 button{border:1px solid var(--line);background:var(--panel2);color:var(--mut);padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer}
+.tabs2 button.on{background:#2c47a0;color:#fff;border-color:#2c47a0}
+.player{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--line)}
+.player:last-child{border-bottom:none}
+.player .pix{width:34px;height:34px}
+.pname{font-weight:700}
+.pmeta{font-size:11px;color:var(--mut)}
+.vel{display:flex;align-items:flex-end;gap:4px;height:46px;margin-top:8px}
+.vel i{flex:1;background:linear-gradient(180deg,#58d26a,#2fae52);border-radius:3px 3px 0 0}
+.feed{font-size:12px}
+.feed .f{padding:7px 2px;border-bottom:1px solid var(--line)}
+.feed .f:last-child{border-bottom:none}
+.feed .t{color:var(--mut);float:right;font-size:11px}
+.chest{display:inline-flex;flex-direction:column;align-items:center;gap:4px;width:60px;font-size:11px;color:var(--mut)}
+.chestbox{width:40px;height:34px;border-radius:5px}
+.chestbox.common{background:linear-gradient(135deg,#7a5a30,#4e3a1f)}
+.chestbox.rare{background:linear-gradient(135deg,#f2b705,#a87c00)}
+.chestbox.legend{background:linear-gradient(135deg,#9a5cd6,#5b2f8a)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+.pulse{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.5}}
+</style>
+</head>
+<body>
+<div class="app">
+<nav class="side">
+  <div class="brand"><div class="cube"></div>OneContext<br>Arena</div>
+  <div class="nav-btn on" data-tab="world"><span class="nav-ico">🗺</span>Project World</div>
+  <div class="nav-btn" data-tab="quests"><span class="nav-ico">⚔</span>Quests</div>
+  <div class="nav-btn" data-tab="team"><span class="nav-ico">👥</span>Team</div>
+  <div class="nav-btn" data-tab="rewards"><span class="nav-ico">🏆</span>Rewards</div>
+  <div class="me">
+    <div class="row"><svg class="pix" viewBox="0 0 32 32"></svg><div><b id="meName"></b><div class="pmeta" id="meLv"></div></div></div>
+    <div class="xpmini"><i id="meXp"></i></div>
+  </div>
+</nav>
+<main>
+<header class="top">
+  <strong>OneContext — Project World</strong>
+  <span class="tag">SIMULATED DATA (design mockup)</span>
+  <div class="live"><span class="dot"></span>Live</div>
+</header>
+<div class="mtabs">
+ <button class="nav-btn mbtn on" data-tab="world">🗺 World</button>
+ <button class="nav-btn mbtn" data-tab="quests">⚔ Quests</button>
+ <button class="nav-btn mbtn" data-tab="team">👥 Team</button>
+ <button class="nav-btn mbtn" data-tab="rewards">🏆 Rewards</button>
+</div>
+<div class="wrap">
+<div class="grid2" id="worldView">
+  <section>
+    <div class="sky">
+      <div class="hud">
+        <div class="card barbig"><div class="row"><b style="font-size:12px">Project Progress</b><span class="sp"></span><b id="pct"></b></div><div class="pbar"><i id="pbar"></i></div><div class="pmeta" id="psub" style="margin-top:4px"></div></div>
+      </div>
+      <svg id="map" viewBox="0 0 900 460" role="img" aria-label="Project world map. Islands are folders, buildings are quests."></svg>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h2>Legend</h2>
+      <span class="chip lo">✔ Verified</span> <span class="chip hi">! Pending</span> <span class="chip med">⇄ In review</span> <span class="chip sec">⛏ In progress</span>
+    </div>
+  </section>
+  <aside>
+    <div class="card" style="margin-bottom:12px"><h2>Team</h2><div id="players"></div></div>
+    <div class="card" style="margin-bottom:12px"><h2>Project Velocity</h2><div class="vel" id="vel"></div></div>
+    <div class="card"><h2>Recent Activity</h2><div class="feed" id="feed"></div></div>
+  </aside>
+</div>
+
+<div class="grid2" id="questView" hidden>
+  <section>
+    <div class="card">
+      <h2>Quest Board · PRs &amp; Issues</h2>
+      <div class="tabs2"><button class="on" data-f="all">All</button><button data-f="pr">PRs</button><button data-f="iss">Issues</button><button data-f="hi">High priority</button></div>
+      <div id="qlist"></div>
+      <div class="pmeta" style="margin-top:8px">The agent only proposes highlights. XP is granted when the server verifies the work (merged PR + green CI) or the host approves.</div>
+    </div>
+  </section>
+  <aside>
+    <div class="card" style="margin-bottom:12px"><h2>Leaderboard (verified XP)</h2><div id="lb"></div></div>
+    <div class="card"><h2>My Rewards</h2><div id="rw" style="display:flex;gap:10px;flex-wrap:wrap"></div></div>
+  </aside>
+</div>
+<div id="teamView" hidden>
+  <div class="grid2">
+    <section class="card"><h2>Team</h2><div id="teamFull"></div></section>
+    <aside class="card"><h2>Leaderboard</h2><div id="lbTeam"></div></aside>
+  </div>
+</div>
+<div id="rewardsView" hidden>
+  <div class="card"><h2>Rewards &amp; Chests</h2><div id="rwFull" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px"></div></div>
+</div>
+</div>
+</main>
+</div>
+
+<script>
+var NS="http://www.w3.org/2000/svg";
+function el(n,a,p){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+var P=[{n:"Varun",role:"Captain",c:"#4d8dff",h:"#2a3a66",xp:4320,cap:5000,lv:14,done:12,tot:15},
+       {n:"Yash",role:"Builder",c:"#f2b705",h:"#5c4318",xp:3010,cap:4000,lv:12,done:9,tot:13},
+       {n:"Yashwanth",role:"Wizard",c:"#9a5cd6",h:"#3a2756",xp:2500,cap:4500,lv:11,done:8,tot:12},
+       {n:"Moagaveera",role:"Guardian",c:"#3ecf6a",h:"#1d4a2e",xp:3700,cap:4700,lv:13,done:11,tot:14}];
+function head(p,x,y,pl,s){var u=s/8;el("rect",{x:x,y:y,width:s,height:s,rx:2,fill:"#e8b98a"},p);el("rect",{x:x,y:y,width:s,height:u*2.5,rx:2,fill:pl.h},p);
+ el("rect",{x:x+u*1.5,y:y+u*3.5,width:u*1.5,height:u*1.5,fill:"#fff"},p);el("rect",{x:x+u*5,y:y+u*3.5,width:u*1.5,height:u*1.5,fill:"#fff"},p);
+ el("rect",{x:x+u*2,y:y+u*4,width:u,height:u,fill:pl.c},p);el("rect",{x:x+u*5.5,y:y+u*4,width:u,height:u,fill:pl.c},p);
+ el("rect",{x:x,y:y+s-u*1.5,width:s,height:u*1.5,fill:pl.c},p)}
+// islands: {id,cx,cy,r,quests:n,done:n,color,kind}
+var ISL=[
+ {id:"frontend",cx:220,cy:120,rx:130,ry:46,q:"12/16",pct:75,kind:"house",owner:0},
+ {id:"OneContext Base",cx:470,cy:150,rx:150,ry:55,q:"root",pct:100,kind:"castle",owner:-1},
+ {id:"scripts",cx:720,cy:120,rx:110,ry:40,q:"3/5",pct:60,kind:"mill",owner:1},
+ {id:"backend",cx:210,cy:300,rx:130,ry:46,q:"9/12",pct:75,kind:"tower",owner:2},
+ {id:"docs",cx:470,cy:340,rx:120,ry:42,q:"4/4",pct:100,kind:"house",owner:-1},
+ {id:"tests",cx:720,cy:300,rx:120,ry:42,q:"4/8",pct:50,kind:"obs",owner:3}
+];
+function island(p,isl){
+ var g=el("g",{},p);
+ el("ellipse",{cx:isl.cx,cy:isl.cy+isl.ry*0.55,rx:isl.rx*0.9,ry:isl.ry*0.45,fill:"#05070f",opacity:.35},g);
+ // cliff
+ el("path",{d:"M "+(isl.cx-isl.rx)+" "+isl.cy+" Q "+isl.cx+" "+(isl.cy+isl.ry*1.5)+" "+(isl.cx+isl.rx*0.15)+" "+(isl.cy+isl.ry*1.9)+" Q "+(isl.cx+isl.rx*0.5)+" "+(isl.cy+isl.ry*1.3)+" "+(isl.cx+isl.rx)+" "+isl.cy+" L "+(isl.cx+isl.rx*0.9)+" "+(isl.cy+isl.ry*0.3)+" Q "+isl.cx+" "+(isl.cy+isl.ry)+" "+(isl.cx-isl.rx*0.9)+" "+(isl.cy+isl.ry*0.3)+" Z",fill:"#5c4326"},g);
+ el("ellipse",{cx:isl.cx,cy:isl.cy,rx:isl.rx,ry:isl.ry,fill:"#4a8a2e"},g);
+ el("ellipse",{cx:isl.cx,cy:isl.cy-isl.ry*0.12,rx:isl.rx*0.94,ry:isl.ry*0.82,fill:"#5fb33b"},g);
+ // trees
+ [-0.7,0.75].forEach(function(f){var tx=isl.cx+isl.rx*f,ty=isl.cy-isl.ry*0.3;el("rect",{x:tx-3,y:ty+6,width:6,height:10,fill:"#6b4a26"},g);el("circle",{cx:tx,cy:ty,r:12,fill:"#2f7a30"},g)});
+ var bx=isl.cx,by=isl.cy-isl.ry*0.95;
+ if(isl.kind=="castle"){el("rect",{x:bx-46,y:by-55,width:92,height:60,fill:"#9aa0ab"},g);el("rect",{x:bx-46,y:by-70,width:92,height:16,fill:"#7d838d"},g);
+  [-46,-20,16,40].forEach(function(dx){el("rect",{x:bx+dx,y:by-95,width:10,height:40,fill:"#7d838d"},g);el("polygon",{points:(bx+dx-2)+","+(by-95)+" "+(bx+dx+12)+","+(by-95)+" "+(bx+dx+5)+","+(by-110),fill:"#6a2fa8"},g)});
+  el("rect",{x:bx-7,y:by-20,width:14,height:20,fill:"#2a1a0f"},g);el("rect",{x:bx-70,y:by-12,width:12,height:60,fill:"#6a2fa8"},g);el("text",{x:bx-64,y:by+52,"font-size":10,fill:"#fff"},g).textContent="</>";}
+ else if(isl.kind=="house"){el("polygon",{points:(bx-34)+","+(by-18)+" "+bx+","+(by-46)+" "+(bx+34)+","+(by-18),fill:"#7a3a2a"},g);el("rect",{x:bx-30,y:by-18,width:60,height:40,fill:"#c9a06a"},g);el("rect",{x:bx-6,y:by+4,width:14,height:18,fill:"#3a2414"},g);}
+ else if(isl.kind=="mill"){el("rect",{x:bx-14,y:by-30,width:28,height:55,fill:"#c9a06a"},g);el("polygon",{points:(bx-20)+","+(by-30)+" "+bx+","+(by-50)+" "+(bx+20)+","+(by-30),fill:"#7a3a2a"},g);
+  var bl=el("g",{},g);["0","90","180","270"].forEach(function(r){el("rect",{x:bx-2,y:by-62,width:4,height:26,fill:"#e8d9b0",transform:"rotate("+r+" "+bx+" "+(by-36)+")"},bl)});}
+ else if(isl.kind=="tower"){el("rect",{x:bx-18,y:by-70,width:36,height:95,fill:"#8a7a63"},g);el("rect",{x:bx-22,y:by-78,width:44,height:14,fill:"#6a5b47"},g);el("rect",{x:bx-6,y:by-20,width:12,height:45,fill:"#2a1a0f"},g);el("circle",{cx:bx,cy:by-90,r:5,fill:isl.pct==100?"#f2b705":"#555"},g);}
+ else{el("rect",{x:bx-24,y:by-18,width:48,height:40,fill:"#6a6f7a"},g);el("circle",{cx:bx,cy:by-32,r:17,fill:"#9a5cd6",opacity:.85},g);el("circle",{cx:bx,cy:by-32,r:17,fill:"none",stroke:"#cfa6ff","stroke-width":2},g);}
+ if(isl.owner>=0){var pl=P[isl.owner];head(g,bx-70,by-26,pl,22);el("rect",{x:bx-78,y:by-32,width:62,height:14,rx:3,fill:"#0f1830",opacity:.85},g);var lb=el("text",{x:bx-47,y:by-21,"text-anchor":"middle","font-size":9,fill:"#fff","font-weight":"700"},g);lb.textContent=pl.n;}
+ var lab=el("g",{},g);
+ el("rect",{x:isl.cx-56,y:isl.cy+isl.ry*1.05,width:112,height:34,rx:6,fill:"#0f1830",stroke:"#243154"},lab);
+ var t1=el("text",{x:isl.cx,y:isl.cy+isl.ry*1.05+15,"text-anchor":"middle","font-size":11,"font-weight":"800",fill:"#eaf0ff"},lab);t1.textContent=isl.id+"/";
+ var t2=el("text",{x:isl.cx,y:isl.cy+isl.ry*1.05+28,"text-anchor":"middle","font-size":10,fill:isl.pct==100?"#7bf0a0":"#f2b705"},lab);t2.textContent=isl.q+" Quests  "+isl.pct+"%";
+ [[0,0]].forEach(function(){var paths=[["frontend","OneContext Base"],["OneContext Base","scripts"],["OneContext Base","backend"],["OneContext Base","docs"],["OneContext Base","tests"]];});
+}
+function draw(){var s=document.getElementById("map");
+ var paths=[["frontend","OneContext Base"],["OneContext Base","scripts"],["OneContext Base","backend"],["OneContext Base","docs"],["OneContext Base","tests"]];
+ function find(id){for(var i=0;i<ISL.length;i++)if(ISL[i].id==id)return ISL[i]}
+ paths.forEach(function(pr){var a=find(pr[0]),b=find(pr[1]);el("path",{d:"M"+a.cx+" "+a.cy+" Q "+((a.cx+b.cx)/2)+" "+((a.cy+b.cy)/2-40)+" "+b.cx+" "+b.cy,fill:"none",stroke:"#f2b705","stroke-width":3,"stroke-dasharray":"2 7",opacity:.55},s)});
+ ISL.forEach(function(isl){island(s,isl)});
+}
+function initWorld(){draw();
+ var h="";P.forEach(function(p){h+="<div class='player'><svg class='pix' viewBox='0 0 32 32' width='34' height='34'></svg><div class='sp'><div class='pname'>"+p.n+(p.role=="Captain"?" 👑":"")+"</div><div class='pmeta'>Lv."+p.lv+" · "+p.done+" Quests</div><div class='xpmini'><i style='width:"+(p.xp/p.cap*100)+"%'></i></div></div></div>"});
+ document.getElementById("players").innerHTML=h;
+ var pel=document.getElementById("players");var svgs=pel.querySelectorAll(".pix");P.forEach(function(p,i){head(svgs[i],0,0,p,32)});
+ var meSvg=document.querySelector(".me .pix");head(meSvg,0,0,P[0],32);
+ document.getElementById("meName").textContent=P[0].n;document.getElementById("meLv").textContent="Lv. "+P[0].lv+" · Captain";document.getElementById("meXp").style.width=(P[0].xp/P[0].cap*100)+"%";
+ var done=P.reduce(function(a,b){return a+b.done},0),tot=P.reduce(function(a,b){return a+b.tot},0),pct=Math.round(done/tot*100);
+ document.getElementById("pct").textContent=pct+"%";document.getElementById("pbar").style.width=pct+"%";document.getElementById("psub").textContent=done+" / "+tot+" quests completed";
+ var vh=[40,55,48,60,52,66,74,70,80,90];document.getElementById("vel").innerHTML=vh.map(function(v){return "<i style='height:"+v+"%'></i>"}).join("");
+ var feed=[["PR #142 merged","+150 XP · by Yash","2m ago"],["Tests passed (CI)","+100 XP","5m ago"],["Dependency conflict resolved","+200 XP","12m ago"],["Pushed 4 commits to frontend/","+40 XP · by Varun","18m ago"]];
+ document.getElementById("feed").innerHTML=feed.map(function(f){return "<div class='f'><span class='t'>"+f[2]+"</span><b>"+f[0]+"</b><div class='pmeta'>"+f[1]+"</div></div>"}).join("");
+}
+var Q=[
+{id:"#148",t:"Fix collision in live sync for /world SSE",k:"PR",tags:["hi","conf"],tagl:["High","Conflict"],agent:"Merge conflict with arena.py",cat:"pr"},
+{id:"#67",t:"Dependency risk: outdated package (fastapi)",k:"Issue",tags:["hi","sec"],tagl:["High","Security"],agent:"Vulnerability (CVE) detected",cat:"iss"},
+{id:"#145",t:"Add Minecraft world map (single theme)",k:"PR",tags:["med","feat"],tagl:["Medium","Feature"],agent:"Ready to review (2 checks pending)",cat:"pr"},
+{id:"#150",t:"Quest board: agent highlight line",k:"Issue",tags:["med","feat"],tagl:["Medium","Feature"],agent:"Suggested from board design",cat:"iss"},
+{id:"#151",t:"Leaderboard verified-XP math",k:"PR",tags:["lo","feat"],tagl:["Low","Feature"],agent:"CI green, awaiting host approval",cat:"pr"},
+{id:"#73",t:"Flaky SSE test (2/10 runs)",k:"Issue",tags:["med"],tagl:["Medium"],agent:"Failed 2 of last 10 runs",cat:"iss"},
+{id:"#152",t:"Deploy backend to persistent host",k:"Issue",tags:["hi"],tagl:["High"],agent:"Blocks the demo",cat:"iss"}];
+var CLS={hi:"hi",med:"med",lo:"lo",sec:"sec",feat:"feat",conf:"conf"};
+function renderQ(f){var list=Q.filter(function(q){if(f=="all")return true;if(f=="pr")return q.cat=="pr";if(f=="iss")return q.cat=="iss";if(f=="hi")return q.tags.indexOf("hi")>=0;return true});
+ document.getElementById("qlist").innerHTML=list.map(function(q){var tags=q.tags.map(function(c,i){return "<span class='chip "+CLS[c]+"'>"+q.tagl[i]+"</span>"}).join(" ");
+  return "<div class='qrow'><div class='qicon "+(q.k=="PR"?"pr":"iss")+"'>"+(q.k=="PR"?"⇄":"!")+"</div><div class='sp'><div class='qtitle'>"+q.id+" "+q.t+"</div><div class='qmeta'>"+tags+"</div><div class='agent-line'>✦ Agent: "+q.agent+"</div></div><button class='take'>Take Quest</button></div>"}).join("");}
+function initQuests(){renderQ("all");
+ document.querySelectorAll(".tabs2 button").forEach(function(b){b.onclick=function(){document.querySelectorAll(".tabs2 button").forEach(function(x){x.className=""});b.className="on";renderQ(b.dataset.f)}});
+ var order=P.slice().sort(function(a,b){return b.xp-a.xp});
+ document.getElementById("lb").innerHTML=order.map(function(p,i){return "<div class='row' style='margin:6px 0'><b>"+(i+1)+"</b><span>"+p.n+"</span><span class='sp'></span><b>"+p.xp+" XP</b></div>"}).join("")+"<div class='pmeta'>Only verified outcomes count.</div>";
+ document.getElementById("rw").innerHTML=
+  "<div class='chest'><div class='chestbox common'></div>Builder Lv.2</div>"+
+  "<div class='chest'><div class='chestbox rare'></div>Reviewer Lv.1</div>"+
+  "<div class='chest'><div class='chestbox legend'></div>Bug Hunter Lv.1</div>";
+}
+function initExtra(){
+ document.getElementById("teamFull").innerHTML=document.getElementById("players").innerHTML;
+ document.getElementById("lbTeam").innerHTML=document.getElementById("lb")?document.getElementById("lb").innerHTML:"";
+ document.querySelectorAll("#teamFull .pix").forEach(function(sv,i){head(sv,0,0,P[i],34)});
+ document.getElementById("rwFull").innerHTML="<div class='chest'><div class='chestbox common'></div>Builder Lv.2</div><div class='chest'><div class='chestbox rare'></div>Reviewer Lv.1</div><div class='chest'><div class='chestbox legend'></div>Bug Hunter Lv.1</div><div class='chest'><div class='chestbox rare'></div>Streak x5</div>";
+}
+document.querySelectorAll(".nav-btn[data-tab]").forEach(function(b){b.onclick=function(){
+ var t=b.dataset.tab;
+ document.querySelectorAll(".nav-btn[data-tab]").forEach(function(x){x.classList.remove("on")});
+ document.querySelectorAll(".nav-btn[data-tab='"+t+"']").forEach(function(x){x.classList.add("on")});
+ document.getElementById("worldView").hidden=t!="world";
+ document.getElementById("questView").hidden=t!="quests";
+ document.getElementById("teamView").hidden=t!="team";
+ document.getElementById("rewardsView").hidden=t!="rewards";
+}});
+try{initWorld();}catch(e){console.error("initWorld failed:",e);}
+try{initQuests();}catch(e){console.error("initQuests failed:",e);}
+try{initExtra();}catch(e){console.error("initExtra failed:",e);}
+</script>
+</body>
+</html>
