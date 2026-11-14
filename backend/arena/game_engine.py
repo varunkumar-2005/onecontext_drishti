@@ -415,7 +415,7 @@ Output a STRICT JSON object matching this schema exactly (no code fence, no text
             names = [name.strip()[:80] for name in names if isinstance(name, str) and name.strip()]
         if not names:
             data["phase_landmark_names"] = [
-                "Trailhead Camp", "Crafting Workshop", "River Bridge", "Beacon Tower", "Victory Castle",
+                "Ingestion Gateway", "Engine Pipeline", "Agent Matrix", "Telemetry Nexus", "Production Citadel",
             ]
         else:
             data["phase_landmark_names"] = names[:20]

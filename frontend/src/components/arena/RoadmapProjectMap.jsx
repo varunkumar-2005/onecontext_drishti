@@ -1,11 +1,12 @@
 import React, { useState, useMemo } from "react";
 import "./RoadmapProjectMap.css";
 
-// Default archetypes and coordinates for the 5 phases
+// Default archetypes and coordinates for the 5 engineering phases
 const DEFAULT_PHASE_CONFIGS = [
   {
     order: 0,
-    defaultTitle: "Phase 1: Discovery",
+    defaultTitle: "Phase 1: Architecture & Ingestion",
+    shortTitle: "Architecture & Ingest",
     archetype: "camp",
     x: 210,
     y: 540,
@@ -16,7 +17,8 @@ const DEFAULT_PHASE_CONFIGS = [
   },
   {
     order: 1,
-    defaultTitle: "Phase 2: MVP",
+    defaultTitle: "Phase 2: Core Engine & API Services",
+    shortTitle: "Core Engine & APIs",
     archetype: "workshop",
     x: 490,
     y: 530,
@@ -27,7 +29,8 @@ const DEFAULT_PHASE_CONFIGS = [
   },
   {
     order: 2,
-    defaultTitle: "Phase 3: Beta",
+    defaultTitle: "Phase 3: AI Agent Matrix & Validation",
+    shortTitle: "Agent Matrix & Rules",
     archetype: "bridge",
     x: 630,
     y: 330,
@@ -38,7 +41,8 @@ const DEFAULT_PHASE_CONFIGS = [
   },
   {
     order: 3,
-    defaultTitle: "Phase 4: Launch",
+    defaultTitle: "Phase 4: Real-Time Sync & Telemetry",
+    shortTitle: "Real-Time Telemetry",
     archetype: "tower",
     x: 940,
     y: 530,
@@ -49,7 +53,8 @@ const DEFAULT_PHASE_CONFIGS = [
   },
   {
     order: 4,
-    defaultTitle: "Phase 5: The Scale Journey",
+    defaultTitle: "Phase 5: Production Deployment & Scale",
+    shortTitle: "Production Release",
     archetype: "castle",
     x: 1040,
     y: 190,
@@ -87,25 +92,25 @@ export default function RoadmapProjectMap({
 
   // Markdown import state
   const [markdownInput, setMarkdownInput] = useState(
-`# Phase 1: Discovery
-- [ ] User research & system architecture (XP: 100) (Due: 2026-11-20)
-- [ ] Establish repository & CI pipeline (XP: 80) (Due: 2026-11-22)
+`# Phase 1: Architecture & Ingestion
+- [ ] Connect OneContext Hindsight shared memory bank (XP: 100) (Due: 2026-11-20)
+- [ ] Ingest repository files & extract AST code blocks (XP: 120) (Due: 2026-11-22)
 
-# Phase 2: MVP
-- [ ] Core game loop & world generator (XP: 150) (Due: 2026-11-25)
-- [ ] Real-time sync & state persistence (XP: 120) (Due: 2026-11-27)
+# Phase 2: Core Engine & API Services
+- [ ] Configure Groq dual-model LLM engine with fallback (XP: 150) (Due: 2026-11-25)
+- [ ] Build shared context pack generator & AST parser (XP: 140) (Due: 2026-11-27)
 
-# Phase 3: Beta
-- [ ] Multiplayer presence & radar telemetry (XP: 180) (Due: 2026-11-30)
-- [ ] Security audit & boss encounters (XP: 200) (Due: 2026-12-02)
+# Phase 3: AI Agent Matrix & Validation
+- [ ] Initialize Planner, Builder & Validator agent roles (XP: 180) (Due: 2026-11-30)
+- [ ] Implement semantic contradiction detector in Hindsight (XP: 200) (Due: 2026-12-02)
 
-# Phase 4: Launch
-- [ ] Production cloud deployment & smoke tests (XP: 220) (Due: 2026-12-05)
-- [ ] Monitoring, alerting & telemetry live (XP: 150) (Due: 2026-12-07)
+# Phase 4: Real-Time Sync & Telemetry
+- [ ] Deploy sub-second Server-Sent Events (SSE) telemetry stream (XP: 220) (Due: 2026-12-05)
+- [ ] Enable concurrent file edit detection & 3-way LLM merge (XP: 200) (Due: 2026-12-07)
 
-# Phase 5: The Scale Journey
-- [ ] Multi-region celestial cluster scaling (XP: 300) (Due: 2026-12-15)
-- [ ] Community plugins & custom themes (XP: 250) (Due: 2026-12-20)`
+# Phase 5: Production Deployment & Scale
+- [ ] Multi-tenant isolation & distributed session clustering (XP: 300) (Due: 2026-12-15)
+- [ ] Cloud deployment verification & end-to-end benchmark (XP: 250) (Due: 2026-12-20)`
   );
 
   const phases = useMemo(() => roadmap?.phases || [], [roadmap]);
@@ -868,6 +873,8 @@ export default function RoadmapProjectMap({
             const signY = layout.signY;
             const isPhaseLocked = phase.locked;
             const phaseStars = phase.stars || 0;
+            const shortTechTitle = phase.layout?.shortTitle
+              || (phase.title ? phase.title.replace(/^Phase\s*\d+\s*:\s*/i, "") : `Phase ${idx + 1}`);
 
             return (
               <g
@@ -886,9 +893,9 @@ export default function RoadmapProjectMap({
 
                 {/* Carved wooden plaque */}
                 <rect
-                  x="-72"
+                  x="-76"
                   y="-22"
-                  width="144"
+                  width="156"
                   height="34"
                   rx="9"
                   fill="#78350f"
@@ -896,17 +903,17 @@ export default function RoadmapProjectMap({
                   strokeWidth="3"
                   filter="url(#softShadow)"
                 />
-                <rect x="-70" y="-20" width="140" height="30" rx="7" fill="#fef3c7" />
+                <rect x="-74" y="-20" width="152" height="30" rx="7" fill="#fef3c7" />
 
                 {/* Number circle: ①..⑤ */}
-                <circle cx="-52" cy="-5" r="11" fill="#b45309" stroke="#451a03" strokeWidth="2" />
-                <text x="-52" y="-1" textAnchor="middle" fill="#ffffff" fontSize="11" fontWeight="900">
+                <circle cx="-56" cy="-5" r="11" fill="#b45309" stroke="#451a03" strokeWidth="2" />
+                <text x="-56" y="-1" textAnchor="middle" fill="#ffffff" fontSize="11" fontWeight="900">
                   {idx + 1}
                 </text>
 
-                {/* Phase Title */}
-                <text x="10" y="-1" textAnchor="middle" fill="#451a03" fontSize="11" fontWeight="900">
-                  {phase.title?.slice(0, 16) || `Phase ${idx + 1}`}
+                {/* Tech Checkpoint Title */}
+                <text x="14" y="-1" textAnchor="middle" fill="#451a03" fontSize="10.5" fontWeight="900">
+                  {shortTechTitle.length > 20 ? shortTechTitle.slice(0, 19) + "…" : shortTechTitle}
                 </text>
 
                 {/* Star badges if completed */}
