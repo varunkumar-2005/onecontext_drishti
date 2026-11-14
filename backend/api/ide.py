@@ -135,6 +135,12 @@ class ConflictResolveRequest(BaseModel):
     strategy: str = "ai_merge"  # "ai_merge" | "keep_current" | "keep_incoming"
 
 
+class ConflictSimulateRequest(BaseModel):
+    path: str
+    current_content: str
+    author: str = "Alice"
+
+
 class SecurityQuestCreateRequest(BaseModel):
     path: str
     rule: str
@@ -433,20 +439,25 @@ def ai_code_assist(project_id: str, body: AIAssistRequest, request: Request):
     explanation = ""
     if llm:
         try:
-            response_text, _model = llm.chat(messages, max_tokens=1024, temperature=0.3)
-            # Split response into suggestion and explanation if possible
+            response_text, _model = llm.chat(messages, max_tokens=1500, temperature=0.2)
             if "```" in response_text:
                 parts = response_text.split("```")
-                # First code block is the suggestion
-                if len(parts) >= 3:
-                    suggestion = parts[1].strip()
-                    explanation = "".join(parts[2:]).strip()
+                raw_code = parts[1].strip() if len(parts) >= 2 else response_text
+                first_line, *rest = raw_code.split("\n", 1)
+                if first_line.strip().lower() in {"python", "py", "javascript", "js", "typescript", "ts", "json", "html", "css", "sql", "sh", "bash"}:
+                    suggestion = rest[0].strip() if rest else ""
                 else:
-                    suggestion = response_text
-                    explanation = ""
+                    suggestion = raw_code
+                
+                explanation_parts = []
+                if parts[0].strip():
+                    explanation_parts.append(parts[0].strip())
+                if len(parts) >= 3 and parts[2].strip():
+                    explanation_parts.append(parts[2].strip())
+                explanation = "\n".join(explanation_parts) if explanation_parts else "AI generated code changes grounded in project memory."
             else:
                 suggestion = response_text
-                explanation = ""
+                explanation = "AI generated code changes."
         except Exception as exc:
             logger.error("LLM error in AI assist: %s", exc)
             suggestion = ""
@@ -681,34 +692,48 @@ def resolve_conflict(project_id: str, body: ConflictResolveRequest, request: Req
                     "Preserve valid logic from both versions. "
                     "Adhere to these recorded project architectural decisions:\n"
                     f"{mem_text}\n"
-                    "Output ONLY the merged code without markdown code blocks, or inside a single ``` code block."
+                    "Output ONLY the complete merged code without markdown code blocks, or inside a single ``` code block."
                 )
                 user_msg = (
                     f"File: {body.path}\n\n"
-                    f"=== Version 1 (by {body.author}) ===\n{body.current_content[:3000]}\n\n"
-                    f"=== Version 2 (by {body.other_author}) ===\n{body.incoming_content[:3000]}\n"
+                    f"=== Version 1 (by {body.author}) ===\n{body.current_content[:3500]}\n\n"
+                    f"=== Version 2 (by {body.other_author}) ===\n{body.incoming_content[:3500]}\n"
                 )
                 raw_merged, _ = llm.chat([
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_msg},
-                ], max_tokens=1500, temperature=0.1)
+                ], max_tokens=2000, temperature=0.1)
 
                 if "```" in raw_merged:
                     parts = raw_merged.split("```")
-                    resolved_content = parts[1].strip() if len(parts) >= 2 else raw_merged
-                    if resolved_content.startswith(("python", "javascript", "typescript", "json", "html", "css")):
-                        resolved_content = resolved_content.split("\n", 1)[1] if "\n" in resolved_content else resolved_content
+                    raw_code = parts[1].strip() if len(parts) >= 2 else raw_merged
+                    first_line, *rest = raw_code.split("\n", 1)
+                    if first_line.strip().lower() in {"python", "py", "javascript", "js", "typescript", "ts", "json", "html", "css", "sql", "sh", "bash"}:
+                        resolved_content = rest[0].strip() if rest else ""
+                    else:
+                        resolved_content = raw_code
                 else:
                     resolved_content = raw_merged.strip()
 
                 explanation = f"AI successfully synthesized changes from both {body.author} and {body.other_author}, aligned with project architectural rules."
             except Exception as exc:
                 logger.error("LLM conflict merge error: %s", exc)
-                # Fallback to combined contents
-                resolved_content = f"{body.current_content}\n\n# --- Merged from {body.other_author} ---\n{body.incoming_content}"
+                ext = os.path.splitext(body.path)[1].lower()
+                if ext in {".js", ".jsx", ".ts", ".tsx"}:
+                    resolved_content = f"{body.current_content}\n\n// --- Merged concurrent update from {body.other_author} ---\n{body.incoming_content}"
+                elif ext in {".html"}:
+                    resolved_content = f"{body.current_content}\n\n<!-- Merged concurrent update from {body.other_author} -->\n{body.incoming_content}"
+                else:
+                    resolved_content = f"{body.current_content}\n\n# --- Merged concurrent update from {body.other_author} ---\n{body.incoming_content}"
                 explanation = "Merged non-destructively using structured append."
         else:
-            resolved_content = f"{body.current_content}\n\n# --- Merged from {body.other_author} ---\n{body.incoming_content}"
+            ext = os.path.splitext(body.path)[1].lower()
+            if ext in {".js", ".jsx", ".ts", ".tsx"}:
+                resolved_content = f"{body.current_content}\n\n// --- Merged concurrent update from {body.other_author} ---\n{body.incoming_content}"
+            elif ext in {".html"}:
+                resolved_content = f"{body.current_content}\n\n<!-- Merged concurrent update from {body.other_author} -->\n{body.incoming_content}"
+            else:
+                resolved_content = f"{body.current_content}\n\n# --- Merged concurrent update from {body.other_author} ---\n{body.incoming_content}"
             explanation = "Merged non-destructively using structured append."
 
     # Generate unified diff preview
@@ -727,6 +752,61 @@ def resolve_conflict(project_id: str, body: ConflictResolveRequest, request: Req
             "message": "Validated: Syntactically intact & aligned with project memory",
         },
         "memories_consulted": len(memories),
+    }
+
+
+@router.post("/projects/{project_id}/simulate-conflict")
+def simulate_conflict(project_id: str, body: ConflictSimulateRequest, request: Request):
+    """
+    Generate an intelligent, realistic concurrent modification for testing
+    conflict detection and AI merge without dummy hardcoding.
+    """
+    llm = getattr(request.app.state, "llm", None)
+    ext = os.path.splitext(body.path)[1].lower()
+
+    simulated_content = ""
+    if llm and body.current_content.strip():
+        try:
+            prompt = (
+                f"You are simulating a peer developer ('{body.author}') concurrently editing the file '{body.path}'.\n"
+                "Create a realistic alternative edit (for example: modify a method, update function signature, change configuration, or refactor a block).\n"
+                "Maintain valid syntax and structure matching the existing file.\n"
+                "Output ONLY the complete updated file code without markdown code blocks, or inside a single ``` code block.\n\n"
+                f"Original file content:\n{body.current_content[:3500]}"
+            )
+            raw_text, _ = llm.chat([
+                {"role": "system", "content": "You are a professional software engineer simulating real concurrent code commits."},
+                {"role": "user", "content": prompt},
+            ], max_tokens=1500, temperature=0.3)
+
+            if "```" in raw_text:
+                parts = raw_text.split("```")
+                raw_code = parts[1].strip() if len(parts) >= 2 else raw_text
+                first_line, *rest = raw_code.split("\n", 1)
+                if first_line.strip().lower() in {"python", "py", "javascript", "js", "typescript", "ts", "json", "html", "css", "sql", "sh", "bash"}:
+                    simulated_content = rest[0].strip() if rest else ""
+                else:
+                    simulated_content = raw_code
+            else:
+                simulated_content = raw_text.strip()
+        except Exception as exc:
+            logger.warning("LLM simulation fallback: %s", exc)
+
+    if not simulated_content:
+        # Realistic language-aware modification fallback
+        if ext in {".py"}:
+            simulated_content = body.current_content + f"\n\n# Concurrent enhancement by {body.author}\ndef sync_project_telemetry(payload: dict) -> dict:\n    \"\"\"Process telemetry state for {body.path}.\"\"\"\n    return {{'author': '{body.author}', 'status': 'synchronized'}}\n"
+        elif ext in {".js", ".jsx", ".ts", ".tsx"}:
+            simulated_content = body.current_content + f"\n\n// Concurrent enhancement by {body.author}\nexport function syncProjectTelemetry(payload) {{\n  return {{ author: '{body.author}', status: 'synchronized' }};\n}}\n"
+        elif ext in {".html"}:
+            simulated_content = body.current_content + f"\n<!-- Telemetry metadata from {body.author} -->\n<meta name=\"collaborator\" content=\"{body.author}\" />\n"
+        else:
+            simulated_content = body.current_content + f"\n# Concurrent change by {body.author}\n"
+
+    return {
+        "path": body.path,
+        "simulated_content": simulated_content,
+        "author": body.author,
     }
 
 

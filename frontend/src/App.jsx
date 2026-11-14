@@ -240,7 +240,7 @@ export default function App() {
           />
           <Route
             path="/agents"
-            element={<Agents activeProject={activeProject} />}
+            element={<Agents activeProject={activeProject} setActiveProject={setActiveProject} />}
           />
           <Route
             path="/memory"

@@ -351,6 +351,7 @@ export const getIDEFileChanges = async (projectId, path = '', minutes = 60) => (
 export const runSecurityScan = async (projectId, { path, content }) => (await api.post(`/ide/projects/${projectId}/security-scan`, { path, content })).data;
 export const getAIAssist = async (projectId, { prompt, file_path, file_content, context }) => (await api.post(`/ide/projects/${projectId}/ai-assist`, { prompt, file_path, file_content, context })).data;
 export const detectConflicts = async (projectId, { path, author, content }) => (await api.post(`/ide/projects/${projectId}/detect-conflicts`, { path, author, content })).data;
+export const simulateConflict = async (projectId, { path, current_content, author }) => (await api.post(`/ide/projects/${projectId}/simulate-conflict`, { path, current_content, author })).data;
 export const postInsight = async (projectId, payload) => (await api.post(`/ide/projects/${projectId}/insights`, payload)).data;
 export const searchInsights = async (projectId, query = '', timeRange = '24h') => (await api.get(`/ide/projects/${projectId}/insights?query=${encodeURIComponent(query)}&time_range=${timeRange}`)).data;
 export const resolveConflict = async (projectId, payload) => (await api.post(`/ide/projects/${projectId}/resolve-conflict`, payload)).data;

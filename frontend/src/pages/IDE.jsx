@@ -9,6 +9,7 @@ import {
   runSecurityScan,
   getAIAssist,
   detectConflicts,
+  simulateConflict,
   resolveConflict,
   createSecurityQuest,
   verifySecurityQuest,
@@ -51,7 +52,8 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState("");
 
-  // AI assistant state
+  // AI assistant / Vibe Copilot state
+  const [copilotTargetFile, setCopilotTargetFile] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiThinking, setAiThinking] = useState(false);
   const [aiResult, setAiResult] = useState(null);
@@ -121,6 +123,13 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
 
     return () => clearInterval(interval);
   }, [selectedProjectId]);
+
+  // Sync Copilot target file with active tab
+  useEffect(() => {
+    if (activeTab) {
+      setCopilotTargetFile(activeTab);
+    }
+  }, [activeTab]);
 
   // Load room chat if team available
   useEffect(() => {
@@ -253,13 +262,28 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
   // Run AI Code Assist with Hindsight
   async function handleRunAIAssist() {
     if (!aiPrompt.trim() || !selectedProjectId) return;
+    const target = copilotTargetFile || activeTab || "";
     setAiThinking(true);
     setAiResult(null);
     try {
-      const currentCode = activeTab ? fileContents[activeTab] || "" : "";
+      let currentCode = "";
+      if (target) {
+        if (fileContents[target] !== undefined) {
+          currentCode = fileContents[target];
+        } else {
+          try {
+            const fileData = await getIDEFileContent(selectedProjectId, target);
+            currentCode = fileData.content || "";
+            setFileContents(prev => ({ ...prev, [target]: currentCode }));
+          } catch {
+            currentCode = "";
+          }
+        }
+      }
+
       const res = await getAIAssist(selectedProjectId, {
         prompt: aiPrompt,
-        file_path: activeTab || "workspace",
+        file_path: target || "workspace",
         file_content: currentCode,
         context: `User: ${userName}, Project: ${selectedProjectName}`,
       });
@@ -268,7 +292,7 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
       // Record this interaction as an insight event
       await postInsight(selectedProjectId, {
         event_type: "decision",
-        description: `AI Code Suggestion: ${aiPrompt.slice(0, 100)}`,
+        description: `Vibe Copilot edit for ${target || "workspace"}: ${aiPrompt.slice(0, 100)}`,
         source: "ai_assist",
       });
       loadInsightsData();
@@ -283,9 +307,33 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
     }
   }
 
-  function handleApplyAISuggestion() {
-    if (!aiResult?.suggestion || !activeTab) return;
-    handleCodeChange(aiResult.suggestion);
+  async function handleApplyAISuggestion() {
+    if (!aiResult?.suggestion) return;
+    const target = copilotTargetFile || activeTab;
+    if (!target) {
+      alert("Please open or select a target file first.");
+      return;
+    }
+
+    setFileContents(prev => ({ ...prev, [target]: aiResult.suggestion }));
+    if (!openTabs.includes(target)) {
+      setOpenTabs(prev => [...prev, target]);
+    }
+    setActiveTab(target);
+
+    try {
+      await saveIDEFile(selectedProjectId, {
+        path: target,
+        content: aiResult.suggestion,
+        author: `${userName} (via Copilot)`,
+      });
+      setDirtyFiles(prev => ({ ...prev, [target]: false }));
+      setSaveStatus(`✓ Saved ${target} to project disk`);
+      loadRecentChanges();
+      alert(`✅ Changes applied and saved to ${target}!`);
+    } catch (err) {
+      alert("Failed to save changes to file: " + err.message);
+    }
   }
 
   // Security scan current file
@@ -359,8 +407,19 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
   async function handleSimulateConflict() {
     if (!activeTab || !selectedProjectId) return;
     const currentCode = fileContents[activeTab] || "";
-    // Save mock edit from Teammate 'Alice'
-    const simulatedOtherCode = currentCode + "\n\n# --- Conflicting update from Alice ---\ndef verify_audit_token():\n    return {'status': 'strict_mfa'}\n";
+    let simulatedOtherCode = "";
+    try {
+      const simRes = await simulateConflict(selectedProjectId, {
+        path: activeTab,
+        current_content: currentCode,
+        author: "Alice",
+      });
+      simulatedOtherCode = simRes.simulated_content || "";
+    } catch (err) {
+      console.warn("Simulation API fallback:", err);
+      simulatedOtherCode = currentCode + "\n\n// Concurrent update from Alice\n";
+    }
+
     await saveIDEFile(selectedProjectId, {
       path: activeTab,
       content: simulatedOtherCode,
@@ -687,62 +746,6 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
                 placeholder="File content..."
                 spellCheck="false"
               />
-
-              {/* Bottom AI Assistant Drawer */}
-              <div className="ide-ai-drawer">
-                <div className="ide-ai-header">
-                  <span style={{ fontWeight: 600, color: "#58a6ff" }}>
-                    ⚡ AI Coding Assistant (Project Memory Grounded)
-                  </span>
-                  <span style={{ fontSize: "11px", color: "#8b949e" }}>
-                    Active Model: Groq / OpenAI GPT-120B + Hindsight RAG
-                  </span>
-                </div>
-
-                <div className="ide-ai-input-row">
-                  <input
-                    type="text"
-                    className="ide-ai-input"
-                    placeholder="Ask AI: e.g. 'Add input validation for email', 'Implement 15m RS256 JWT'..."
-                    value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleRunAIAssist()}
-                  />
-                  <button
-                    className="ide-btn-primary"
-                    onClick={handleRunAIAssist}
-                    disabled={aiThinking || !aiPrompt.trim()}
-                  >
-                    {aiThinking ? "Thinking..." : "🚀 Ask Assistant"}
-                  </button>
-                </div>
-
-                {/* AI Assistant Result Box */}
-                {aiResult && (
-                  <div className="ide-ai-response-box">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                      <strong style={{ color: "#3fb950" }}>Assistant Response:</strong>
-                      {aiResult.suggestion && (
-                        <button
-                          className="ide-btn-secondary"
-                          style={{ padding: "2px 8px", fontSize: "11px" }}
-                          onClick={handleApplyAISuggestion}
-                        >
-                          Apply to Editor
-                        </button>
-                      )}
-                    </div>
-                    <div style={{ marginBottom: "6px", color: "#c9d1d9" }}>
-                      {aiResult.explanation}
-                    </div>
-                    {aiResult.memories_used && aiResult.memories_used.length > 0 && (
-                      <div style={{ fontSize: "11px", color: "#8b949e", borderTop: "1px solid #21262d", paddingTop: "4px" }}>
-                        🧠 Grounded in {aiResult.memories_used.length} Hindsight project memories
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
             </div>
           ) : (
             <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#8b949e" }}>
@@ -1014,6 +1017,100 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
                         Send
                       </button>
                     </form>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Vibe AI Copilot Dock */}
+              <div className="ide-copilot-dock">
+                <div className="ide-copilot-header">
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "14px" }}>🤖</span>
+                    <strong style={{ color: "#58a6ff", fontSize: "12px" }}>Vibe AI Copilot</strong>
+                  </div>
+                  {/* File Target Switcher */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                    <span style={{ fontSize: "10px", color: "#8b949e" }}>File:</span>
+                    <select
+                      value={copilotTargetFile}
+                      onChange={(e) => setCopilotTargetFile(e.target.value)}
+                      className="ide-copilot-select"
+                      title="Select target file for Copilot to edit"
+                    >
+                      {openTabs.length > 0 ? (
+                        openTabs.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))
+                      ) : activeTab ? (
+                        <option value={activeTab}>{activeTab}</option>
+                      ) : (
+                        <option value="">(No active file)</option>
+                      )}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="ide-copilot-input-row">
+                  <input
+                    type="text"
+                    className="ide-copilot-input"
+                    placeholder={
+                      copilotTargetFile
+                        ? `Ask Copilot to change ${copilotTargetFile.split("/").pop()}...`
+                        : "Ask Copilot to write or refactor code..."
+                    }
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleRunAIAssist()}
+                  />
+                  <button
+                    className="ide-btn-primary"
+                    onClick={handleRunAIAssist}
+                    disabled={aiThinking || !aiPrompt.trim()}
+                    style={{ padding: "6px 12px", whiteSpace: "nowrap" }}
+                  >
+                    {aiThinking ? "Thinking..." : "⚡ Generate"}
+                  </button>
+                </div>
+
+                {/* Copilot Result & Apply */}
+                {aiResult && (
+                  <div className="ide-copilot-response-box">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                      <span style={{ color: "#3fb950", fontWeight: "600", fontSize: "11px" }}>
+                        Suggested Changes:
+                      </span>
+                      {aiResult.suggestion && (
+                        <button
+                          className="ide-btn-primary"
+                          style={{ padding: "3px 10px", fontSize: "11px", backgroundColor: "#238636" }}
+                          onClick={handleApplyAISuggestion}
+                          title="Apply changes to this file and save to disk"
+                        >
+                          ✨ Apply to {copilotTargetFile ? copilotTargetFile.split("/").pop() : "File"}
+                        </button>
+                      )}
+                    </div>
+
+                    {aiResult.explanation && (
+                      <div style={{ marginBottom: "6px", color: "#c9d1d9", fontSize: "11px", lineHeight: "1.4" }}>
+                        {aiResult.explanation}
+                      </div>
+                    )}
+
+                    {aiResult.suggestion && (
+                      <pre className="ide-copilot-code-preview">
+                        <code>{aiResult.suggestion.slice(0, 400) + (aiResult.suggestion.length > 400 ? "\n... (truncated preview)" : "")}</code>
+                      </pre>
+                    )}
+
+                    {aiResult.memories_used && aiResult.memories_used.length > 0 && (
+                      <div style={{ fontSize: "10px", color: "#8b949e", borderTop: "1px solid #21262d", paddingTop: "4px", marginTop: "4px" }}>
+                        🧠 Grounded in {aiResult.memories_used.length} Hindsight project memories
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -57,9 +57,23 @@ def register_agent(
 
 @router.get("/agents", response_model=List[AgentResponse])
 def list_agents(project_id: str) -> List[AgentResponse]:
-    """List all agents registered for this project."""
+    """List all agents registered for this project. Auto-provisions defaults if empty."""
     get_project_or_404(project_id)
     agents = local_db.list_agents(project_id)
+    if not agents:
+        defaults = [
+            {"id": "planner-agent", "name": "Planner Agent", "role": "Planner"},
+            {"id": "builder-agent", "name": "Builder Agent", "role": "Builder"},
+            {"id": "validator-agent", "name": "Validator Agent", "role": "Validator"},
+        ]
+        for a in defaults:
+            local_db.register_agent(
+                agent_id=a["id"],
+                project_id=project_id,
+                name=a["name"],
+                role=a["role"],
+            )
+        agents = local_db.list_agents(project_id)
     return [AgentResponse(**a) for a in agents]
 
 
@@ -116,6 +130,31 @@ def run_agent(
             output=res["output"],
             memories_recalled=[MemoryItem(**m) for m in res["memories_recalled"]],
             memories_retained=res["decisions_retained"],
+        )
+
+    elif "validator" in role_lower or "validator" in id_lower:
+        validator = ValidatorAgent(
+            project_id=project_id,
+            bank_id=bank_id,
+            memory_service=memory_service,
+        )
+        res = validator.validate(draft_text=payload.task, check_topic=payload.context)
+        verdict = "VALID (COMPLIANT)" if res["valid"] else "VIOLATION (CONTRADICTION DETECTED)"
+        output_lines = [
+            f"=== {verdict} ===",
+            f"Analysis: {res['analysis']}",
+        ]
+        if res.get("contradictions"):
+            output_lines.append("\nContradictions identified:")
+            for c in res["contradictions"]:
+                output_lines.append(f" - {c}")
+        return AgentRunResponse(
+            agent_id=agent_id,
+            role=validator.role,
+            project_id=project_id,
+            output="\n".join(output_lines),
+            memories_recalled=[MemoryItem(**m) for m in res.get("citations", [])],
+            memories_retained=[],
         )
 
     else:
