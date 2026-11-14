@@ -418,10 +418,12 @@ def ai_code_assist(project_id: str, body: AIAssistRequest, request: Request):
         {
             "role": "system",
             "content": (
-                "You are an expert coding assistant for the OneContext project. "
+                "You are an expert coding assistant and technical advisor for the OneContext project.\n"
                 "Use the following project memories for context:\n"
                 f"{memory_context}\n\n"
-                "Provide clear, concise code suggestions with brief explanations."
+                "Guidelines:\n"
+                "1. If the user asks an informational question, explanation, overview, or review (e.g. 'what does this do', 'explain', 'why', 'give me what the file is doing'), provide a clear, helpful explanation. Do NOT wrap entire prose in full-file code blocks.\n"
+                "2. If the user asks you to modify, write, refactor, fix, or add code to the file, provide the complete replacement code inside a single ```<language> code block, followed by a brief explanation."
             ),
         },
         {
@@ -442,7 +444,7 @@ def ai_code_assist(project_id: str, body: AIAssistRequest, request: Request):
             response_text, _model = llm.chat(messages, max_tokens=1500, temperature=0.2)
             if "```" in response_text:
                 parts = response_text.split("```")
-                raw_code = parts[1].strip() if len(parts) >= 2 else response_text
+                raw_code = parts[1].strip() if len(parts) >= 2 else ""
                 first_line, *rest = raw_code.split("\n", 1)
                 if first_line.strip().lower() in {"python", "py", "javascript", "js", "typescript", "ts", "json", "html", "css", "sql", "sh", "bash"}:
                     suggestion = rest[0].strip() if rest else ""
@@ -456,8 +458,9 @@ def ai_code_assist(project_id: str, body: AIAssistRequest, request: Request):
                     explanation_parts.append(parts[2].strip())
                 explanation = "\n".join(explanation_parts) if explanation_parts else "AI generated code changes grounded in project memory."
             else:
-                suggestion = response_text
-                explanation = "AI generated code changes."
+                # Informational answer / explanation (no code replacement block)
+                suggestion = ""
+                explanation = response_text
         except Exception as exc:
             logger.error("LLM error in AI assist: %s", exc)
             suggestion = ""

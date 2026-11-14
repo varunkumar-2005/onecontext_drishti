@@ -1078,11 +1078,11 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
                 {/* Copilot Result & Apply */}
                 {aiResult && (
                   <div className="ide-copilot-response-box">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                      <span style={{ color: "#3fb950", fontWeight: "600", fontSize: "11px" }}>
-                        Suggested Changes:
-                      </span>
-                      {aiResult.suggestion && (
+                    {aiResult.suggestion ? (
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                        <span style={{ color: "#3fb950", fontWeight: "600", fontSize: "11px" }}>
+                          Suggested Code Changes:
+                        </span>
                         <button
                           className="ide-btn-primary"
                           style={{ padding: "3px 10px", fontSize: "11px", backgroundColor: "#238636" }}
@@ -1091,11 +1091,15 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
                         >
                           ✨ Apply to {copilotTargetFile ? copilotTargetFile.split("/").pop() : "File"}
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div style={{ marginBottom: "6px", color: "#58a6ff", fontWeight: "600", fontSize: "11px" }}>
+                        💡 Copilot Explanation:
+                      </div>
+                    )}
 
                     {aiResult.explanation && (
-                      <div style={{ marginBottom: "6px", color: "#c9d1d9", fontSize: "11px", lineHeight: "1.4" }}>
+                      <div style={{ marginBottom: "6px", color: "#c9d1d9", fontSize: "11px", lineHeight: "1.4", whiteSpace: "pre-wrap" }}>
                         {aiResult.explanation}
                       </div>
                     )}
