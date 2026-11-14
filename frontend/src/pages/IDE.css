@@ -544,6 +544,136 @@
   background-color: #0d1117;
 }
 
+/* Context Pack Modal Modern Enhancements */
+.ide-pack-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.ide-pack-chip {
+  background: #21262d;
+  color: #c9d1d9;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.ide-pack-chip:hover {
+  background: #30363d;
+  border-color: #58a6ff;
+  color: #f0f6fc;
+}
+
+.ide-pack-target-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.ide-pack-target-card {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.ide-pack-target-card:hover {
+  border-color: #58a6ff;
+  background: #161b22;
+}
+
+.ide-pack-target-card.active {
+  border-color: #238636;
+  background: rgba(46, 160, 67, 0.15);
+  box-shadow: 0 0 8px rgba(46, 160, 67, 0.3);
+}
+
+.ide-pack-target-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f0f6fc;
+}
+
+.ide-pack-target-subtitle {
+  font-size: 10px;
+  color: #8b949e;
+}
+
+.ide-pack-stats-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  background: rgba(56, 139, 253, 0.08);
+  border: 1px solid rgba(56, 139, 253, 0.25);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+
+.ide-pack-stat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #58a6ff;
+  font-weight: 600;
+}
+
+.ide-pack-output-frame {
+  position: relative;
+  background-color: #090d13;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.ide-pack-output-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.ide-pack-textarea {
+  width: 100%;
+  height: 200px;
+  background-color: #090d13;
+  border: none;
+  color: #e6edf3;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  resize: vertical;
+  outline: none;
+}
+
 /* Vibe AI Copilot Dock (Right Panel Bottom) */
 .ide-copilot-dock {
   background-color: #161b22;

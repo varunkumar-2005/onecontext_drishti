@@ -84,8 +84,26 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
   const [generatedPack, setGeneratedPack] = useState(null);
   const [packLoading, setPackLoading] = useState(false);
   const [packTask, setPackTask] = useState("");
-  const [packFormat, setPackFormat] = useState("codex");
+  const [packFormat, setPackFormat] = useState("cursor");
   const [packTimeRange, setPackTimeRange] = useState("all");
+  const [packCopied, setPackCopied] = useState(false);
+
+  const QUICK_PACK_GOALS = [
+    { label: "🔐 OAuth2 JWT Auth", task: "Implement OAuth2 JWT authentication with RS256 token verification and rotation" },
+    { label: "⚡ Redis Session Caching", task: "Configure Redis session caching, TTL eviction, and connection pooling" },
+    { label: "🛡️ Rate Limiting & CORS", task: "Implement API rate limiting middleware, CORS whitelist, and security headers" },
+    { label: "🗄️ Database Migrations", task: "Set up schema migration runner with foreign key constraints and audit logging" },
+    { label: "🧪 Pytest Endpoints", task: "Write pytest integration test suites with mock database fixtures for all routes" },
+  ];
+
+  const ASSISTANT_OPTIONS = [
+    { id: "cursor", name: "Cursor", badge: ".cursorrules", icon: "⚡" },
+    { id: "claude", name: "Claude", badge: "<project_context>", icon: "🟣" },
+    { id: "chatgpt", name: "ChatGPT", badge: "Instructions", icon: "🟢" },
+    { id: "codex", name: "Codex / Copilot", badge: "# RULES", icon: "🤖" },
+    { id: "gemini", name: "Gemini", badge: "<context>", icon: "✨" },
+    { id: "generic", name: "Markdown", badge: "Universal Doc", icon: "📄" },
+  ];
 
   const userName = currentUser || localStorage.getItem("onecontext_user") || "Developer";
 
@@ -475,6 +493,7 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
   async function handleGenerateContextPack() {
     if (!selectedProjectId || !packTask.trim()) return;
     setPackLoading(true);
+    setPackCopied(false);
     try {
       const res = await getContextPack(selectedProjectId, {
         task: packTask,
@@ -488,6 +507,25 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
     } finally {
       setPackLoading(false);
     }
+  }
+
+  function handleCopyContextPack() {
+    if (!generatedPack?.pack) return;
+    navigator.clipboard.writeText(generatedPack.pack);
+    setPackCopied(true);
+    setTimeout(() => setPackCopied(false), 2200);
+  }
+
+  function handleDownloadContextPack() {
+    if (!generatedPack?.pack) return;
+    const filename = packFormat === "cursor" ? ".cursorrules" : `context-pack-${packFormat}.md`;
+    const blob = new Blob([generatedPack.pack], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   // Folder toggling in explorer
@@ -1204,99 +1242,172 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
       {/* Context Pack Generation Modal */}
       {contextPackModal && (
         <div className="ide-modal-backdrop">
-          <div className="ide-modal-window">
+          <div className="ide-modal-window" style={{ maxWidth: "860px", width: "95vw" }}>
             <div className="ide-modal-header">
-              <span>📦 Generate Task-Specific Context Pack</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "18px" }}>📦</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: "15px", color: "#f0f6fc" }}>
+                    Task-Specific Context Pack Generator
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#8b949e", fontWeight: 400 }}>
+                    Export grounded Hindsight memories & architecture facts tailored for external AI assistants
+                  </div>
+                </div>
+              </div>
               <button
                 onClick={() => setContextPackModal(false)}
-                style={{ background: "none", border: "none", color: "#8b949e", fontSize: "16px", cursor: "pointer" }}
+                style={{ background: "none", border: "none", color: "#8b949e", fontSize: "20px", cursor: "pointer", padding: "4px 8px" }}
               >
                 ×
               </button>
             </div>
 
             <div className="ide-modal-body">
-              <div style={{ marginBottom: "12px" }}>
-                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", fontWeight: 600 }}>
-                  Current Development Task / Goal *
+              {/* Task Goal Input & Templates */}
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", fontWeight: 600, color: "#c9d1d9" }}>
+                  Current Development Task or Goal *
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Implement OAuth2 JWT login with 15m expiration"
+                  placeholder="e.g. Implement OAuth2 JWT login with RS256 token verification"
                   value={packTask}
                   onChange={(e) => setPackTask(e.target.value)}
                   className="ide-search-input"
+                  style={{ width: "100%", padding: "8px 12px", fontSize: "13px" }}
                 />
-              </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
-                <div>
-                  <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", fontWeight: 600 }}>
-                    Target Assistant / Format
-                  </label>
-                  <select
-                    value={packFormat}
-                    onChange={(e) => setPackFormat(e.target.value)}
-                    style={{ width: "100%", padding: "6px", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#f0f6fc", borderRadius: "4px" }}
-                  >
-                    <option value="codex">Codex</option>
-                    <option value="chatgpt">ChatGPT</option>
-                    <option value="gemini">Gemini</option>
-                    <option value="markdown">Generic Markdown</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", fontWeight: 600 }}>
-                    Time Range Filter
-                  </label>
-                  <select
-                    value={packTimeRange}
-                    onChange={(e) => setPackTimeRange(e.target.value)}
-                    style={{ width: "100%", padding: "6px", backgroundColor: "#0d1117", border: "1px solid #30363d", color: "#f0f6fc", borderRadius: "4px" }}
-                  >
-                    <option value="all">Entire Project History</option>
-                    <option value="1h">Last 1 Hour</option>
-                    <option value="24h">Last 24 Hours</option>
-                    <option value="7d">Last 7 Days</option>
-                    <option value="30d">Last 30 Days</option>
-                  </select>
+                {/* Quick Templates */}
+                <div className="ide-pack-chips-row">
+                  <span style={{ fontSize: "11px", color: "#8b949e" }}>Templates:</span>
+                  {QUICK_PACK_GOALS.map((g) => (
+                    <button
+                      key={g.label}
+                      type="button"
+                      className="ide-pack-chip"
+                      onClick={() => setPackTask(g.task)}
+                    >
+                      {g.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
+              {/* Target Assistant Cards Grid */}
+              <div style={{ marginBottom: "14px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", fontWeight: 600, color: "#c9d1d9" }}>
+                  Target Assistant / Format
+                </label>
+                <div className="ide-pack-target-grid">
+                  {ASSISTANT_OPTIONS.map((ast) => {
+                    const isSelected = packFormat === ast.id;
+                    return (
+                      <div
+                        key={ast.id}
+                        className={`ide-pack-target-card ${isSelected ? "active" : ""}`}
+                        onClick={() => setPackFormat(ast.id)}
+                      >
+                        <span style={{ fontSize: "16px" }}>{ast.icon}</span>
+                        <span className="ide-pack-target-title">{ast.name}</span>
+                        <span className="ide-pack-target-subtitle">{ast.badge}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Time Range Filter */}
+              <div style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", marginBottom: "4px", fontSize: "12px", fontWeight: 600, color: "#c9d1d9" }}>
+                  Memory Time Filter
+                </label>
+                <select
+                  value={packTimeRange}
+                  onChange={(e) => setPackTimeRange(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "7px 10px",
+                    backgroundColor: "#0d1117",
+                    border: "1px solid #30363d",
+                    color: "#f0f6fc",
+                    borderRadius: "6px",
+                    fontSize: "12px",
+                  }}
+                >
+                  <option value="all">Entire Project History (Recommended for comprehensive context)</option>
+                  <option value="24h">Last 24 Hours (Focus on today's active work)</option>
+                  <option value="7d">Last 7 Days (Recent sprint memories)</option>
+                  <option value="30d">Last 30 Days (Current release cycle)</option>
+                  <option value="1h">Last 1 Hour (Ultra-fresh immediate changes)</option>
+                </select>
+              </div>
+
+              {/* Action Button */}
               <button
                 className="ide-btn-primary"
-                style={{ width: "100%", justifyContent: "center" }}
+                style={{
+                  width: "100%",
+                  justifyContent: "center",
+                  padding: "10px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  opacity: packLoading || !packTask.trim() ? 0.6 : 1,
+                  cursor: packLoading || !packTask.trim() ? "not-allowed" : "pointer",
+                }}
                 onClick={handleGenerateContextPack}
                 disabled={packLoading || !packTask.trim()}
               >
-                {packLoading ? "Retrieving semantic memories from Hindsight..." : "Generate Context Pack"}
+                {packLoading ? (
+                  <span>🧠 Querying Hindsight semantic memory bank & project insights...</span>
+                ) : (
+                  <span>⚡ Generate Optimized Context Pack</span>
+                )}
               </button>
 
+              {/* Generated Context Pack Viewer */}
               {generatedPack && (
-                <div style={{ marginTop: "14px" }}>
-                  <div style={{ display: "flex", gap: "10px", fontSize: "11px", color: "#58a6ff", marginBottom: "6px" }}>
-                    <span>📊 {generatedPack.stats?.memories_count || 0} memories</span>
-                    <span>• {generatedPack.stats?.insights_count || 0} insights</span>
-                    <span>• ~{generatedPack.stats?.estimated_tokens || 0} tokens</span>
-                    <span>• Filter: {generatedPack.stats?.time_range}</span>
+                <div className="ide-pack-output-frame">
+                  {/* Stats bar */}
+                  <div className="ide-pack-stats-banner">
+                    <span className="ide-pack-stat-badge">🧠 {generatedPack.stats?.memories_count || 0} Memories</span>
+                    <span className="ide-pack-stat-badge">📋 {generatedPack.stats?.insights_count || 0} Insights</span>
+                    <span className="ide-pack-stat-badge">⚡ ~{generatedPack.stats?.estimated_tokens || 0} Tokens</span>
+                    <span className="ide-pack-stat-badge">⏱️ Filter: {generatedPack.stats?.time_range}</span>
+                    <span className="ide-pack-stat-badge" style={{ color: "#3fb950" }}>
+                      🎯 Format: {packFormat.toUpperCase()}
+                    </span>
                   </div>
+
+                  {/* Code frame header */}
+                  <div className="ide-pack-output-header">
+                    <span>
+                      📄 {packFormat === "cursor" ? ".cursorrules" : `context-pack-${packFormat}.md`} ({generatedPack.pack?.length || 0} chars)
+                    </span>
+                    <button
+                      className="ide-btn-secondary"
+                      style={{
+                        padding: "3px 8px",
+                        fontSize: "11px",
+                        background: packCopied ? "#238636" : "#21262d",
+                        color: "#f0f6fc",
+                        border: "1px solid #30363d",
+                      }}
+                      onClick={handleCopyContextPack}
+                    >
+                      {packCopied ? "✓ Copied to Clipboard!" : "📋 Quick Copy"}
+                    </button>
+                  </div>
+
                   <textarea
                     readOnly
                     value={generatedPack.pack}
-                    style={{
-                      width: "100%",
-                      height: "180px",
-                      backgroundColor: "#090d13",
-                      border: "1px solid #30363d",
-                      borderRadius: "4px",
-                      color: "#c9d1d9",
-                      fontFamily: "monospace",
-                      fontSize: "12px",
-                      padding: "8px",
-                      boxSizing: "border-box",
-                    }}
+                    className="ide-pack-textarea"
                   />
+
+                  <div style={{ padding: "8px 12px", background: "#161b22", borderTop: "1px solid #30363d", fontSize: "11px", color: "#8b949e" }}>
+                    💡 <strong>Where to paste:</strong> Copy this block into your Cursor project rules (<code>.cursorrules</code>), Claude Project Knowledge, or ChatGPT system instructions so they have full OneContext memory.
+                  </div>
                 </div>
               )}
             </div>
@@ -1309,15 +1420,24 @@ export default function IDE({ activeProject, currentUser, currentTeam }) {
                 Close
               </button>
               {generatedPack && (
-                <button
-                  className="ide-btn-primary"
-                  onClick={() => {
-                    navigator.clipboard.writeText(generatedPack.pack);
-                    alert("Context pack copied to clipboard!");
-                  }}
-                >
-                  📋 Copy Context Pack
-                </button>
+                <>
+                  <button
+                    className="ide-btn-secondary"
+                    onClick={handleDownloadContextPack}
+                    title="Download as file"
+                  >
+                    💾 Download {packFormat === "cursor" ? ".cursorrules" : ".md"}
+                  </button>
+                  <button
+                    className="ide-btn-primary"
+                    onClick={handleCopyContextPack}
+                    style={{
+                      background: packCopied ? "#238636" : undefined,
+                    }}
+                  >
+                    {packCopied ? "✓ Copied to Clipboard!" : "📋 Copy Context Pack"}
+                  </button>
+                </>
               )}
             </div>
           </div>
